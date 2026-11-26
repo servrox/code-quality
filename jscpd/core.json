@@ -1,0 +1,24 @@
+{
+  "threshold": 3,
+  "minLines": 5,
+  "minTokens": 50,
+  "mode": "mild",
+  "pattern": "**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+  "reporters": ["console"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/generated/**",
+    "**/_generated/**",
+    "**/*.gen.*",
+    "**/.astro/**",
+    "**/.next/**",
+    "**/.output/**",
+    "**/.cache/**",
+    "**/test-results/**",
+    "**/playwright-report/**",
+    "**/reports/**"
+  ]
+}
