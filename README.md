@@ -85,6 +85,8 @@ Dependency Cruiser is an **optional peer**. Install `dependency-cruiser@18.9.0` 
 
 When enforcing application imports against external tooling, retain dependency edges into `node_modules` with `doNotFollow`; excluding those targets completely would remove the edges that the boundary rule needs.
 
+Runtime-cycle analysis excludes erased type-only imports **before** detecting cycles. Filtering a reported cycle afterwards can miss a runtime cycle when shorter type-only cycles overlap it. Supply the project's actual TypeScript configuration: the graph follows its emit semantics. For native TypeScript type-stripping runtimes, use `verbatimModuleSyntax: true` so unused value imports remain runtime edges.
+
 ## Limits and counting
 
 | Metric                                                  | Default |
@@ -100,15 +102,17 @@ When enforcing application imports against external tooling, retain dependency e
 | Parameters / statements per function                    |  4 / 20 |
 | Classes per file                                        |       1 |
 
-Function counting recognizes declarations with bodies, direct arrow/function bindings, exported declarations, default functions and inline CommonJS export functions. One direct `as`, `satisfies` or non-null wrapper is supported. Nested callbacks, methods, arbitrary aliases and factory-returned implementations are outside this syntax policy.
+Function counting recognizes declarations with bodies, direct arrow/function bindings, exported declarations, default functions and inline CommonJS export functions, including TypeScript `export =` functions. One direct `as`, `satisfies` or non-null wrapper is supported for bindings and ESM default expressions. Nested callbacks, methods, arbitrary aliases and factory-returned implementations are outside this syntax policy.
 
-Value, type, default and namespace ESM exports count. Grouped declarations, specifier lists, destructuring and wildcard exports are marked outside explicit consumer-owned entrypoints. CommonJS supports inline export objects and functions; spreads, incremental assignments, indirect values and common mutation helpers are marked. Arbitrary runtime mutation is not inferred.
+Value, type, default and namespace ESM exports count. Grouped declarations, specifier lists, destructuring and wildcard exports are marked outside explicit consumer-owned entrypoints. CommonJS supports inline export objects and functions in both `module.exports` and TypeScript `export =` forms; spreads, incremental assignments, indirect values and common mutation helpers are marked. Dot and literal bracket spellings of the configured mutation helpers are checked. Arbitrary runtime mutation is not inferred.
 
 These limits are policy choices. Each project must still review cohesion and intentional public API boundaries.
 
 ## Baseline helpers
 
 `normalizeLint` validates Oxlint JSON; `normalizeKnip` validates Knip 6 JSON. `createBaseline` groups findings by file, rule and normalized message. `findRegressions` compares the current values with committed allowances.
+
+Knip member identities retain their namespace, for example `First["Unused"]`; an allowance for one enum or namespace cannot cover a same-named member in another. Unqualified export/type identities remain unchanged.
 
 - New groups or occurrences fail.
 - Increased numeric metrics fail even when the diagnostic count stays constant.
@@ -133,7 +137,7 @@ pnpm verify
 
 1. Core/type-aware lint, formatting and additional policy checks.
 2. TypeScript and exported-file checks.
-3. Real Oxlint boundary fixtures and baseline tests.
+3. Real Oxlint boundary fixtures, baseline tests and runtime-cycle regression tests.
 4. `pnpm pack`, installation outside the checkout, all runtime exports, actual ESLint/SonarJS/Anti-Slop plugin execution and strict consumer types.
 
 Implementation files are explicit TypeScript roots; sibling declaration files are excluded from glob discovery to prevent them from hiding JavaScript sources. Imported declarations remain type-checked, including the strict packed consumer.

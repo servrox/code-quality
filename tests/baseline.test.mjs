@@ -127,3 +127,17 @@ void test("Knip unused files and nested duplicate groups count; CODEOWNERS does 
   assert.equal(findRegressions(actual, createBaseline([])).length, 3);
   assert.throws(() => normalizeKnip({ issues: [{ file: "apps/a.ts", exports: [{}] }] }));
 });
+
+void test("Knip members cannot borrow another namespace's allowance", () => {
+  const before = normalizeKnip({
+    issues: [{ file: "src/values.ts", enumMembers: [{ namespace: "First", name: "Unused" }] }],
+  });
+  const after = normalizeKnip({
+    issues: [{ file: "src/values.ts", enumMembers: [{ namespace: "Second", name: "Unused" }] }],
+  });
+
+  assert.equal(findRegressions(before, createBaseline(before)).length, 0);
+  assert.equal(findRegressions(after, createBaseline(before)).length, 1);
+  assert.equal(before[0]?.message, 'First["Unused"]');
+  assert.equal(after[0]?.message, 'Second["Unused"]');
+});

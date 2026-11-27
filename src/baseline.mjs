@@ -13,7 +13,14 @@ const lintReportSchema = z.object({
   number_of_files: z.number().int().positive(),
 });
 
-const knipEntrySchema = z.object({ name: z.string().min(1) });
+const knipEntrySchema = z.object({
+  name: z.string().min(1),
+  namespace: z.string().min(1).optional(),
+});
+
+/** @param {z.infer<typeof knipEntrySchema>} entry - Knip symbol and its optional namespace. */
+const knipSymbolName = (entry) =>
+  entry.namespace === undefined ? entry.name : `${entry.namespace}[${JSON.stringify(entry.name)}]`;
 
 const knipReportSchema = z.object({
   issues: z.array(
@@ -88,7 +95,12 @@ export const normalizeKnip = (input) => {
       }
 
       for (const entry of entries.flat()) {
-        findings.push({ file, rule: `knip/${rule}`, message: entry.name, value: 1 });
+        findings.push({
+          file,
+          rule: `knip/${rule}`,
+          message: knipSymbolName(entry),
+          value: 1,
+        });
       }
     }
   }

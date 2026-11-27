@@ -86,6 +86,33 @@ void test("uncountable CommonJS exports are marked; inline functions pass", () =
   );
 });
 
+void test("literal computed mutation helpers cannot bypass CommonJS export checks", () => {
+  for (const source of [
+    'Object["assign"](module.exports, {a,b,c,d,e,f});',
+    'Object["defineProperty"](exports, "sixth", {value: 6});',
+    'Object["defineProperties"](module["exports"], {sixth: {value: 6}});',
+    'Reflect["set"](exports, "sixth", 6);',
+    'Reflect["defineProperty"](module.exports, "sixth", {value: 6});',
+  ]) {
+    assert.equal(lintFixture(source, "example.cjs").length, 1, source);
+  }
+
+  assert.equal(lintFixture('Object["keys"](module.exports);', "example.cjs").length, 0);
+  assert.equal(lintFixture("Object[assign](module.exports, api);", "example.cjs").length, 0);
+});
+
+void test("TypeScript CommonJS exports share the object and function budgets", () => {
+  assert.equal(lintFixture("export = {a,b,c,d,e};", "example.cts").length, 0);
+  assert.equal(lintFixture("export = {a,b,c,d,e,f};", "example.cts").length, 6);
+  assert.equal(lintFixture("export = {a,b,c,d,e,f,g};", "example.cts").length, 7);
+  assert.equal(lintFixture("export = () => 1;", "example.cts").length, 0);
+  assert.equal(lintFixture(`${declarations(8)}\nexport = () => 9;`, "example.cts").length, 1);
+
+  for (const source of ["export = api;", "export = {...api};"]) {
+    assert.ok(lintFixture(source, "example.cts").length > 0, source);
+  }
+});
+
 void test(
   "nested functions and large ordinary objects do not trigger sibling backtracking",
   { timeout: 10_000 },
