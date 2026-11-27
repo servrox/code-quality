@@ -4,6 +4,7 @@
 
 - Add the optional jscpd CLI with a 3% total duplication limit, zero new clones, and explicit baseline updates.
 - Add an opt-in Dependency Cruiser runtime preset for cycles, unresolved imports, undeclared dependencies, and imports of the quality package.
+- Reject unknown npm dependency classifications and avoid false declaration errors for Node package-import aliases; unresolved-import and tooling-boundary checks still apply to aliases.
 
 ## 0.1.0
 

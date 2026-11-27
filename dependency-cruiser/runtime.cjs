@@ -29,7 +29,11 @@ module.exports = {
       name: "no-undeclared-runtime-imports",
       severity: "error",
       from: {},
-      to: { dependencyTypes: ["npm-no-pkg"] },
+      to: {
+        dependencyTypes: ["npm-no-pkg", "npm-unknown"],
+        // Dependency Cruiser checks the #alias rather than its mapped package in the manifest.
+        dependencyTypesNot: ["aliased-subpath-import"],
+      },
     },
     {
       name: "no-runtime-to-quality-tooling",

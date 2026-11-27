@@ -102,11 +102,18 @@ void test("side-effect and unused value imports remain runtime edges with verbat
 });
 
 void test("runtime preset fails on unresolved imports", () => {
-  const files = { "a.ts": 'import "./missing.ts";' };
-  const result = cruiseFixture(files, runtimePreset);
-  assert.equal(result.status, 1, result.output);
-  assert.match(result.output, /no-unresolved-runtime-imports/u);
-  assert.equal(cruiseFixture(files).status, 0);
+  for (const files of [
+    { "a.ts": 'import "./missing.ts";' },
+    {
+      "a.ts": 'import "#missing";',
+      "package.json": '{"name":"fixture-consumer","imports":{"#missing":"missing-dependency"}}',
+    },
+  ]) {
+    const result = cruiseFixture(files, runtimePreset);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /no-unresolved-runtime-imports/u);
+    assert.equal(cruiseFixture(files).status, 0);
+  }
 });
 
 void test("runtime preset requires installed npm imports to be declared", () => {
@@ -126,6 +133,38 @@ void test("runtime preset requires installed npm imports to be declared", () => 
   assert.equal(declared.status, 0, declared.output);
 });
 
+void test("runtime preset rejects installed npm imports without a consumer manifest", () => {
+  const result = cruiseFixture(
+    {
+      "a.ts": 'import "fixture-dependency";',
+      "node_modules/fixture-dependency/package.json":
+        '{"name":"fixture-dependency","main":"index.js"}',
+      "node_modules/fixture-dependency/index.js": "module.exports = {};",
+    },
+    runtimePreset
+  );
+  assert.equal(result.status, 1, result.output);
+  assert.match(result.output, /no-undeclared-runtime-imports/u);
+});
+
+void test("runtime preset accepts package-import aliases to declared npm dependencies", () => {
+  const result = cruiseFixture(
+    {
+      "a.ts": 'import "#dependency";',
+      "package.json": JSON.stringify({
+        name: "fixture-consumer",
+        dependencies: { "fixture-dependency": "1.0.0" },
+        imports: { "#dependency": "fixture-dependency" },
+      }),
+      "node_modules/fixture-dependency/package.json":
+        '{"name":"fixture-dependency","main":"index.js"}',
+      "node_modules/fixture-dependency/index.js": "module.exports = {};",
+    },
+    runtimePreset
+  );
+  assert.equal(result.status, 0, result.output);
+});
+
 void test("runtime preset catches quality tooling imports even when declared", () => {
   const result = cruiseFixture(
     {
@@ -143,15 +182,20 @@ void test("runtime preset catches quality tooling imports even when declared", (
 });
 
 void test("runtime preset catches a linked installation of the quality package", () => {
-  const result = cruiseFixture(
-    {
-      "a.ts": 'import "@servrox/code-quality/dependency-cruiser";',
-      "package.json":
-        '{"name":"fixture-consumer","devDependencies":{"@servrox/code-quality":"0.1.0"}}',
-    },
-    runtimePreset,
-    { "node_modules/@servrox/code-quality": fileURLToPath(new URL("..", import.meta.url)) }
-  );
-  assert.equal(result.status, 1, result.output);
-  assert.match(result.output, /no-runtime-to-quality-tooling/u);
+  for (const specifier of ["@servrox/code-quality/dependency-cruiser", "#quality"]) {
+    const result = cruiseFixture(
+      {
+        "a.ts": `import ${JSON.stringify(specifier)};`,
+        "package.json": JSON.stringify({
+          name: "fixture-consumer",
+          devDependencies: { "@servrox/code-quality": "0.2.0" },
+          imports: { "#quality": "@servrox/code-quality/dependency-cruiser" },
+        }),
+      },
+      runtimePreset,
+      { "node_modules/@servrox/code-quality": fileURLToPath(new URL("..", import.meta.url)) }
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /no-runtime-to-quality-tooling/u);
+  }
 });

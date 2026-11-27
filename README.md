@@ -8,10 +8,10 @@ Share linting, formatting, duplication, and dependency rules across TypeScript p
 
 ## Quick start
 
-Use Node.js **24.15.0 or newer**. Once `0.1.0` is available on npm, install it with the matching tools.
+Use Node.js **24.15.0 or newer**. Once `0.2.0` is available on npm, install it with the matching tools. The duplicate-check CLI and runtime dependency preset require `0.2.0` or newer; until release, use a reviewed Git commit below.
 
 ```sh
-pnpm add -D -E @servrox/code-quality@0.1.0 \
+pnpm add -D -E @servrox/code-quality@0.2.0 \
   ultracite@8.2.1 oxlint@1.93.0 oxfmt@0.78.0 oxlint-tsgolint@7.0.2007
 ```
 
@@ -99,7 +99,11 @@ Dependency Cruiser is an **optional peer**. Install `dependency-cruiser@18.9.0` 
 
 When enforcing application imports against external tooling, retain dependency edges into `node_modules` with `doNotFollow`; excluding those targets completely would remove the edges that the boundary rule needs.
 
-The opt-in runtime preset adds errors for unresolved imports, installed npm dependencies omitted from the manifest, and runtime imports of `@servrox/code-quality`. Pass the runtime roots to `depcruise` from the consumer and add its own package boundaries and TypeScript aliases there. If the consumer ships runtime code without its devDependencies, it can also add a scoped `npm-dev` rule. Packaged Electron apps can resolve Electron as a devDependency while providing it at runtime, so apply that rule only where the manifest classification reflects deployment.
+The opt-in runtime preset adds errors for unresolved imports, installed npm dependencies omitted from the manifest or whose manifest classification is unknown, and runtime imports of `@servrox/code-quality`. Pass the runtime roots to `depcruise` from the consumer and add its own package boundaries and TypeScript aliases there. If the consumer ships runtime code without its devDependencies, it can also add a scoped `npm-dev` rule. Packaged Electron apps can resolve Electron as a devDependency while providing it at runtime, so apply that rule only where the manifest classification reflects deployment.
+
+Dependency Cruiser 18.9.0 checks `package.json` import aliases such as `#foo` against the alias name instead of the mapped npm package. These aliases are excluded only from the declaration rule to avoid rejecting valid imports. The consumer must validate the mapped packages' manifest declarations. Unresolved aliases and aliases importing quality tooling still fail their respective rules.
+
+Runtime-cycle analysis excludes erased type-only imports **before** detecting cycles. Filtering a reported cycle afterwards can miss a runtime cycle when shorter type-only cycles overlap it. Supply the project's actual TypeScript configuration: the graph follows its emit semantics. For native TypeScript type-stripping runtimes, use `verbatimModuleSyntax: true` so unused value imports remain runtime edges.
 
 ## Duplicate checks
 
@@ -112,8 +116,6 @@ pnpm exec code-quality-duplicates report -- src
 ```
 
 Use `update-baseline` for an explicitly reviewed baseline change. The destination directory must exist. Reuse the same roots and exclusions in each mode, adding `--ignore <glob>` as needed. A consumer may set `--threshold 0` to disallow all detected duplication.
-
-Runtime-cycle analysis excludes erased type-only imports **before** detecting cycles. Filtering a reported cycle afterwards can miss a runtime cycle when shorter type-only cycles overlap it. Supply the project's actual TypeScript configuration: the graph follows its emit semantics. For native TypeScript type-stripping runtimes, use `verbatimModuleSyntax: true` so unused value imports remain runtime edges.
 
 ## Limits and counting
 
