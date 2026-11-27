@@ -1,5 +1,7 @@
 # @servrox/code-quality
 
+![Abstract code with diagnostic markers and a dependency graph](./docs/assets/code-quality-banner.svg)
+
 [![npm version](https://img.shields.io/npm/v/%40servrox%2Fcode-quality)](https://www.npmjs.com/package/@servrox/code-quality) [![Package checks](https://github.com/servrox/code-quality/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/servrox/code-quality/actions/workflows/ci.yml) [![Apache-2.0 license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/servrox/code-quality/blob/main/LICENSE)
 
 Share linting, formatting, duplication, and dependency rules across TypeScript projects. The package provides versioned Ultracite and Oxc presets tested together. Each consumer owns its framework selection, paths, and migration baselines.

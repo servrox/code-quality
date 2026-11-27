@@ -7,7 +7,7 @@ A new consumer can install `@servrox/code-quality@0.1.0`, run the documented con
 ## README and package
 
 - Lead with the package purpose, linked npm, CI, and Apache-2.0 badges, and an exact-version quickstart. Keep the Git-SHA install path, preset reference, and baseline guidance.
-- Use the maintainer-supplied banner at `docs/assets/code-quality-banner.png`. The brief calls for a wide graphite illustration with abstract source code, cyan and lime diagnostic markers, and a subtle dependency graph. Verify the image on GitHub and npm.
+- Use the maintainer-supplied banner at `docs/assets/code-quality-banner.svg`. Verify the image on GitHub and npm.
 - Recheck the companion Agent Skills PR before finalizing setup. Link the canonical skill and verify its install command after merge. Until then, link the catalog and provide a copyable setup prompt.
 - Add an Apache-2.0 license, contribution and security reporting guidance, and a changelog. Enable GitHub private vulnerability reporting and require the two existing CI checks on `main`.
 - Publish the package under its existing name with public access. Preserve version 0.1.0, the exports, Node engine floor, and peer requirements.
