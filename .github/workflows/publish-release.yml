@@ -55,8 +55,14 @@ jobs:
           fi
           git cat-file -e "$BEFORE_SHA^{commit}"
           if ! git cat-file -e "$BEFORE_SHA:.release-please-manifest.json" 2>/dev/null; then
-            test "$version" = "$(git show "$BEFORE_SHA:package.json" | jq -er .version)"
-            echo 'Initializing the manifest for the existing release.'
+            latest=$(curl -fsSL --max-time 15 'https://registry.npmjs.org/@servrox%2fcode-quality/latest' | jq -er .version)
+            test "$version" = "$latest"
+            gh release view "v$version" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease |
+              jq -e --arg tag "v$version" '.tagName == $tag and .isDraft == false and .isPrerelease == false' >/dev/null
+            baseline=$(git rev-parse "refs/tags/v$version^{commit}")
+            git merge-base --is-ancestor "$baseline" "$BEFORE_SHA"
+            test "$version" = "$(git show "$baseline:package.json" | jq -er .version)"
+            echo 'Initializing the manifest from the published npm and GitHub release baseline.'
             exit 0
           fi
           if [[ "$version" == "$(git show "$BEFORE_SHA:.release-please-manifest.json" | jq -er '.["."]')" ]]; then

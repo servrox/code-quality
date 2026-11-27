@@ -248,3 +248,135 @@ cat "$RELEASE_TEST_NPM"
     }
   });
 }
+
+/** @type {[string, string, boolean][]} */
+const initializations = [
+  ["initializes the published baseline after an unreleased source version bump", "pending", true],
+  ["initializes an unchanged published version", "unchanged", true],
+  ["rejects initialization at a version absent from npm latest", "npm-mismatch", false],
+  ["rejects initialization without a matching GitHub release", "release-mismatch", false],
+  ["rejects initialization from a draft GitHub release", "draft", false],
+  ["rejects initialization from a prerelease", "prerelease", false],
+  ["rejects initialization when the GitHub release is missing", "missing-release", false],
+  ["rejects initialization when the release tag is missing", "missing-tag", false],
+  ["rejects initialization when the release tag is outside main history", "unrelated-tag", false],
+  ["rejects initialization when the tagged package version differs", "tagged-version", false],
+  ["rejects initialization on unprotected main", "unprotected", false],
+  ["manual archive verification needs no published baseline lookup", "manual", true],
+];
+
+for (const [name, scenario, accepted] of initializations) {
+  void test(name, () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "release-initialization-"));
+    const repository = path.join(directory, "repository");
+    const bin = path.join(directory, "bin");
+    mkdirSync(repository);
+    mkdirSync(bin);
+    const env = {
+      ...process.env,
+      PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GITHUB_REPOSITORY: "servrox/code-quality",
+      GITHUB_REF: "refs/heads/main",
+      GITHUB_EVENT_NAME: scenario === "manual" ? "workflow_dispatch" : "push",
+      REF_PROTECTED: scenario === "unprotected" ? "false" : "true",
+      GITHUB_OUTPUT: path.join(directory, "output"),
+      GITHUB_STEP_SUMMARY: path.join(directory, "summary"),
+      RELEASE_TEST_SCENARIO: scenario,
+      RELEASE_TEST_RELEASE: path.join(directory, "release.json"),
+      RELEASE_TEST_NPM: path.join(directory, "npm.json"),
+    };
+    /** @param {...string} args - Git arguments for the temporary repository. */
+    const git = (...args) => {
+      const result = execute(
+        "git",
+        ["-c", "user.name=Release test", "-c", "user.email=release@example.invalid", ...args],
+        repository,
+        env
+      );
+      assert.equal(result.status, 0, `git ${args.join(" ")}: ${result.stderr}`);
+      return result.stdout.trim();
+    };
+    /** @param {string} version - Package version in this fixture. */
+    const writePackage = (version) => {
+      writeFileSync(
+        path.join(repository, "package.json"),
+        JSON.stringify({
+          name: "@servrox/code-quality",
+          version,
+          publishConfig: { access: "public", registry: "https://registry.npmjs.org/" },
+        })
+      );
+    };
+
+    try {
+      writeFileSync(
+        path.join(bin, "gh"),
+        `#!/bin/bash
+set -euo pipefail
+[[ "$#" -eq 7 && "$1" == release && "$2" == view && "$3" == v0.1.0 && "$4" == --repo && "$5" == "$GITHUB_REPOSITORY" && "$6" == --json && "$7" == tagName,isDraft,isPrerelease ]]
+[[ "$RELEASE_TEST_SCENARIO" != missing-release && "$RELEASE_TEST_SCENARIO" != manual ]]
+cat "$RELEASE_TEST_RELEASE"
+`,
+        { mode: 0o755 }
+      );
+      writeFileSync(
+        path.join(bin, "curl"),
+        `#!/bin/bash
+set -euo pipefail
+[[ "$#" -eq 4 && "$1" == -fsSL && "$2" == --max-time && "$3" == 15 && "$4" == 'https://registry.npmjs.org/@servrox%2fcode-quality/latest' ]]
+[[ "$RELEASE_TEST_SCENARIO" != manual ]]
+cat "$RELEASE_TEST_NPM"
+`,
+        { mode: 0o755 }
+      );
+      writeFileSync(
+        env.RELEASE_TEST_NPM,
+        JSON.stringify({ version: scenario === "npm-mismatch" ? "0.0.9" : "0.1.0" })
+      );
+      writeFileSync(
+        env.RELEASE_TEST_RELEASE,
+        JSON.stringify({
+          tagName: scenario === "release-mismatch" ? "v0.2.0" : "v0.1.0",
+          isDraft: scenario === "draft",
+          isPrerelease: scenario === "prerelease",
+        })
+      );
+      git("init", "--initial-branch=main");
+      writePackage(scenario === "tagged-version" ? "0.0.9" : "0.1.0");
+      git("add", ".");
+      git("commit", "-m", "chore: published baseline");
+      if (scenario === "unrelated-tag") {
+        git("checkout", "-b", "unrelated");
+        writeFileSync(path.join(repository, "unrelated.txt"), "Not in main history\n");
+        git("add", ".");
+        git("commit", "-m", "chore: unrelated release tag");
+      }
+      if (scenario !== "missing-tag") {
+        git("tag", "v0.1.0");
+      }
+      git("checkout", "main");
+      if (scenario !== "unchanged") {
+        writePackage("0.2.0");
+        git("add", ".");
+        git("commit", "-m", "feat: pending quality gates");
+      }
+      env.BEFORE_SHA = git("rev-parse", "HEAD");
+      writePackage("0.1.0");
+      writeFileSync(
+        path.join(repository, ".release-please-manifest.json"),
+        JSON.stringify({ ".": "0.1.0" })
+      );
+      git("add", ".");
+      git("commit", "-m", "ci: initialize automation at the published baseline");
+      env.GITHUB_SHA = git("rev-parse", "HEAD");
+      const result = execute("bash", ["-c", candidateScript], repository, env);
+      assert.equal(result.status === 0, accepted, result.stdout + result.stderr);
+      assert.match(readFileSync(env.GITHUB_OUTPUT, "utf-8"), /^version=0\.1\.0\nstage=false\n$/u);
+      assert.doesNotMatch(result.stdout, /stage=true/u);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+}

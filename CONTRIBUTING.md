@@ -30,6 +30,8 @@ The [security policy](SECURITY.md) describes private reporting.
 
 ### Set up release automation
 
+Initialize `package.json` and the Release Please manifest at npm's published `latest`, with a matching GitHub release tag in `main` history. If the source already carries an unpublished version, reset only that version and remove its premature changelog entry while retaining the source changes. Manifest initialization verifies the archive without staging it. Release Please then creates the candidate version and changelog entry.
+
 1. Register a private GitHub App under your account and install it on `servrox/code-quality` only. Disable its webhook. Grant **Contents**, **Issues**, and **Pull requests** read/write so it can update release branches and labels and trigger the required PR checks. Keep branch protection active for the App.
 2. Set repository Actions variables `RELEASE_PLEASE_APP_CLIENT_ID` and `RELEASE_PLEASE_APP_SLUG` from the App settings. The slug is the App name in its `/apps/` URL. Store the generated private key as `RELEASE_PLEASE_APP_PRIVATE_KEY` in repository Actions secrets. Create the `autorelease: pending` and `autorelease: tagged` labels if they are missing.
 3. In npm's package settings, configure the **Stage only** Trusted Publisher for `servrox/code-quality`, workflow file `publish-release.yml`, and environment `npm-release`. The GitHub environment accepts `main`. Set up the binding when a new release is ready and complete the first trusted release within two days. Replace an expired binding in npm. For `ENEEDAUTH`, verify those four settings before retrying an unpublished version.
