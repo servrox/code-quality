@@ -17,7 +17,7 @@ const functions =
   `TSExportAssignment[expression.type=${functionTypes}],` +
   `ExpressionStatement[expression.type="AssignmentExpression"][expression.left.object.name="module"][expression.right.type=${functionTypes}]:matches([expression.left.computed=false][expression.left.property.name="exports"],[expression.left.computed=true][expression.left.property.value="exports"]),` +
   `VariableDeclaration:has(> ${functionBinding}),` +
-  `ExportNamedDeclaration:has(> VariableDeclaration > ${functionBinding}))`;
+  `ExportNamedDeclaration:has(> VariableDeclaration:has(> ${functionBinding})))`;
 
 const exports =
   ":matches(ExportNamedDeclaration[declaration]," +

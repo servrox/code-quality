@@ -9,6 +9,11 @@ const declarations = (count) =>
 /** @param {number} count - Input to validate or compare. */
 const exports = (count) =>
   Array.from({ length: count }, (_, i) => `export const v${i} = ${i};`).join("\n");
+/** @param {string} source - Source to lint. @param {string} filename - Parser selection. */
+const functionFindings = (source, filename = "example.ts") =>
+  lintFixture(source, filename).filter(
+    ({ message }) => message === "Maximum 8 top-level functions per file."
+  );
 
 void test("eight top-level functions pass; a ninth and tenth each add a finding", () => {
   assert.equal(lintFixture(declarations(8)).length, 0);
@@ -19,6 +24,89 @@ void test("eight top-level functions pass; a ninth and tenth each add a finding"
 void test("callbacks do not spend the module function budget; direct arrows do", () => {
   assert.equal(lintFixture(`${declarations(8)}\n[1].map((x) => x + 1);`).length, 0);
   assert.equal(lintFixture(`${declarations(8)}\nconst ninth = () => 9;`).length, 1);
+});
+
+void test("exported arrows spend the function budget independently of the export budget", () => {
+  for (const filename of ["example.mjs", "example.ts"]) {
+    for (const [count, expected] of [
+      [8, 0],
+      [9, 1],
+      [10, 2],
+    ]) {
+      const source = Array.from(
+        { length: count },
+        (_, i) => `export const f${i} = () => ${i};`
+      ).join("\n");
+      assert.equal(functionFindings(source, filename).length, expected, `${filename}: ${count}`);
+    }
+  }
+});
+
+void test("exported JSX arrows retain the eight-function boundary and monotonic findings", () => {
+  for (const [count, expected] of [
+    [8, 0],
+    [9, 1],
+    [10, 2],
+  ]) {
+    const source = Array.from(
+      { length: count },
+      (_, i) => `export const View${i} = () => <span>${i}</span>;`
+    ).join("\n");
+    assert.equal(functionFindings(source, "example.tsx").length, expected, `${count} JSX arrows`);
+  }
+});
+
+void test("exported function expressions and single TypeScript wrappers consume one slot", () => {
+  for (const binding of [
+    "() => 9",
+    "function () { return 9; }",
+    "(() => 9) as () => number",
+    "(() => 9) satisfies () => number",
+    "(() => 9)!",
+    "(function () { return 9; }) as () => number",
+    "(function () { return 9; }) satisfies () => number",
+    "(function () { return 9; })!",
+  ]) {
+    const exported = `export const extra = ${binding};`;
+    assert.equal(functionFindings(`${declarations(7)}\n${exported}`).length, 0, binding);
+    assert.equal(functionFindings(`${declarations(8)}\n${exported}`).length, 1, binding);
+  }
+});
+
+void test("mixed private and exported functions count at every module position", () => {
+  const ordinary = declarations(8).split("\n");
+  for (const position of [0, 4, 8]) {
+    const source = ordinary.toSpliced(position, 0, "export const extra = () => 9;").join("\n");
+    assert.equal(functionFindings(source).length, 1, `position ${position}`);
+    assert.equal(functionFindings(`${source}\nexport const tenth = () => 10;`).length, 2);
+  }
+});
+
+void test("nested callbacks and methods in exported values do not spend module slots", () => {
+  for (const exported of [
+    "export const mapped = [1].map((value) => value + 1);",
+    "export const object = { arrow: () => 1, method() { return 1; } };",
+    "export const factory = create(() => () => 1);",
+  ]) {
+    assert.equal(functionFindings(`${declarations(8)}\n${exported}`).length, 0, exported);
+  }
+  const outer = `export const outer = () => {\n${declarations(20)}\nreturn () => 1;\n};`;
+  assert.equal(functionFindings(`${declarations(7)}\n${outer}`).length, 0);
+  assert.equal(functionFindings(`${declarations(8)}\n${outer}`).length, 1);
+});
+
+void test("grouped exported function bindings keep monotonic markers without nested matches", () => {
+  for (const [source, expected] of [
+    ["export const a = () => 1, b = () => 2;", 2],
+    ["export const a = () => 1, b = () => 2, c = () => 3;", 3],
+    ["export const a = [1].map(() => 1), b = { callback: () => 2 };", 0],
+    ["export const outer = () => { const a = () => 1, b = () => 2; return a() + b(); };", 0],
+  ]) {
+    const findings = lintFixture(source).filter(
+      ({ message }) => message === "Declare module-level function bindings separately."
+    );
+    assert.equal(findings.length, expected, source);
+  }
 });
 
 void test("five ESM exports pass; sixth fails, including type/default exports", () => {
