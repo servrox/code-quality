@@ -161,5 +161,10 @@ void test("the lint warning budget applies across a selection longer than one ar
   const result = run(["--scope", "all", "--check", "lint", "--", "*.js"]);
 
   assert.equal(result.status, 1, result.output);
-  assert.equal(result.output.match(/warning eslint\(no-debugger\)/gu)?.length, 2, result.output);
+  assert.match(result.output, /source-00-.*\.js/u);
+  assert.match(result.output, /source-69-.*\.js/u);
+
+  write(`source-00-${"x".repeat(175)}.js`, "export const answer = 42;\n");
+  const allowed = run(["--scope", "all", "--check", "lint", "--", "*.js"]);
+  assert.equal(allowed.status, 0, allowed.output);
 });
