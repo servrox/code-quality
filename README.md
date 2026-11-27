@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/%40servrox%2Fcode-quality)](https://www.npmjs.com/package/@servrox/code-quality) [![Package checks](https://github.com/servrox/code-quality/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/servrox/code-quality/actions/workflows/ci.yml) [![Apache-2.0 license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/servrox/code-quality/blob/main/LICENSE)
 
-Share linting, formatting, duplication, and dependency rules across TypeScript projects. The package provides versioned Ultracite and Oxc presets tested together. Each consumer owns its framework selection, and scan paths.
+Share linting, formatting, duplication, and dependency rules across TypeScript projects. The package provides versioned Ultracite and Oxc presets tested together. Each consumer owns its framework selection and scan paths.
 
 ## Quick start
 
@@ -126,11 +126,13 @@ Add project-specific options and boundaries to this config as needed, retaining 
 
 ## Duplicate checks
 
-Install the optional `jscpd@5.4.3` peer to use the `code-quality-duplicates` CLI. Start with the strict check. It prints the native report and fails for any detected duplication.
+Install the optional `jscpd@5.4.3` peer to use the `code-quality-duplicates` CLI. Start with the strict check. It prints jscpd's clone locations and summary table and fails for any detected duplication.
 
 ```sh
 pnpm exec code-quality-duplicates check -- src
 ```
+
+The scanner runs directly with jscpd. The optional `dry-refactoring` skill is independent of the package and CI.
 
 For an explicitly approved migration, create and use a native baseline:
 
