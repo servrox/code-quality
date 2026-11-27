@@ -1,0 +1,79 @@
+name: Prepare release PR
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    if: ${{ github.repository == 'servrox/code-quality' && github.ref == 'refs/heads/main' && github.ref_protected }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the previous release and GitHub App setup
+        id: ready
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_APP: ${{ vars.RELEASE_PLEASE_APP_SLUG }}
+          RELEASE_APP_CLIENT_ID: ${{ vars.RELEASE_PLEASE_APP_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          current=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq 'select(.protected) | .commit.sha')
+          if [[ "$current" != "$GITHUB_SHA" ]]; then
+            echo 'A newer main commit will prepare the release PR.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ -z "$RELEASE_APP" || -z "$RELEASE_APP_CLIENT_ID" ]]; then
+            echo 'Configure the Release Please GitHub App as described in CONTRIBUTING.md.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          version=$(jq -er '.version' package.json)
+          test "$version" = "$(jq -er '.["."]' .release-please-manifest.json)"
+          latest=$(curl -fsSL --max-time 15 'https://registry.npmjs.org/@servrox%2fcode-quality/latest' | jq -er .version)
+          if [[ "$latest" != "$version" ]]; then
+            echo "Finish publishing $version on npm before preparing another release PR." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          release=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName // ""')
+          if [[ "$release" != "v$version" ]]; then
+            echo "Create the GitHub release for v$version before preparing another release PR." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          printf 'ready=true\n' >> "$GITHUB_OUTPUT"
+      - name: Get repository-scoped release App token
+        if: ${{ steps.ready.outputs.ready == 'true' }}
+        id: app
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
+        with:
+          client-id: ${{ vars.RELEASE_PLEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      - name: Verify configured App identity
+        if: ${{ steps.ready.outputs.ready == 'true' }}
+        env:
+          EXPECTED_APP: ${{ vars.RELEASE_PLEASE_APP_SLUG }}
+          ACTUAL_APP: ${{ steps.app.outputs.app-slug }}
+        run: test "$ACTUAL_APP" = "$EXPECTED_APP"
+      - name: Open or update release PR
+        if: ${{ steps.ready.outputs.ready == 'true' }}
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          token: ${{ steps.app.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true

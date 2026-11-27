@@ -8,10 +8,10 @@ Share linting, formatting, duplication, and dependency rules across TypeScript p
 
 ## Quick start
 
-Use Node.js **24.15.0 or newer**. Once `0.2.0` is available on npm, install it with the matching tools. The duplicate-check CLI and runtime dependency preset require `0.2.0` or newer; until release, use a reviewed Git commit below.
+Use Node.js **24.15.0 or newer**. Install the published npm package with the matching tools. The duplicate-check CLI, runtime dependency preset, and runtime configuration factory require `0.2.0` or newer. If npm `latest` is still `0.1.0`, use a reviewed Git commit below to try those additions before the next release.
 
 ```sh
-pnpm add -D -E @servrox/code-quality@0.2.0 \
+pnpm add -D -E @servrox/code-quality@latest \
   ultracite@8.2.1 oxlint@1.93.0 oxfmt@0.78.0 oxlint-tsgolint@7.0.2007
 ```
 

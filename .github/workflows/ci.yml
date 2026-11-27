@@ -35,5 +35,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
+      - name: Check release workflow guards
+        run: node --test tests/release/*.test.mjs
       - name: Ensure verification leaves the checkout unchanged
         run: git diff --exit-code

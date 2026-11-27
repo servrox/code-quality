@@ -1,6 +1,6 @@
 {
   "name": "@servrox/code-quality",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Reusable Ultracite/Oxc presets and quality policy for servrox projects.",
   "homepage": "https://github.com/servrox/code-quality#readme",
   "bugs": {

@@ -7,6 +7,8 @@ pnpm install --frozen-lockfile
 pnpm verify
 ```
 
+For release automation changes, also run `node --test tests/release/*.test.mjs` with Bash, Git, and jq available. These tests execute the workflow guards against temporary Git histories and mock the external GitHub and npm responses. CI runs them on both supported Node versions.
+
 1. Open an issue for a new preset, rule, or dependency policy so maintainers can discuss its consumer impact with you.
 2. Submit a focused pull request. Explain which presets or consumers are affected and update the examples and changelog when behavior changes.
 3. Run `pnpm verify` and include the result in the PR. The packed-consumer test checks runtime exports, plugin resolution, and strict TypeScript declarations.
@@ -15,13 +17,23 @@ The [security policy](SECURITY.md) describes private reporting.
 
 ## Release checklist
 
-1. Preview the README banner on GitHub and merge the reviewed package version and changelog to protected `main`. In [Stage npm release](https://github.com/servrox/code-quality/actions/workflows/publish-release.yml), run `verify` with the exact version in `package.json`. Review the uploaded tarball and its `SHA256SUMS`.
-2. Use `trusted-stage` on `main` for subsequent releases. Before the first such release, configure `servrox/code-quality`, `publish-release.yml`, and the `npm-release` environment as a stage-only trusted publisher in npm. Configure the GitHub environment to accept deployments from `main`. Complete the first trusted release within two days of creating the binding. Delete and recreate it if it expires.
-3. Open npm's **Staged Packages** tab. Match the version and stage ID to the workflow summary, and confirm that the SHA-256 of the downloaded staged tarball matches the summary. Approve with 2FA. If the submission result is unclear, check the staged list before rerunning. Reject a bad stage before approval and publish a new version for fixes after approval.
-4. Confirm that `npm view @servrox/code-quality dist-tags.latest` matches the released version. Check `npm view @servrox/code-quality@VERSION dist.integrity` with that version in place of `VERSION`. Check the banner on the npm package page and repeat the README quickstart in a fresh project. Create `vVERSION` and the matching GitHub release at the verified commit with the changelog entry as release notes.
+1. Merge changes with Conventional Commit titles such as `fix:` and `feat:`. The **Prepare release PR** GitHub Actions workflow updates the package version, release manifest, and changelog. Review the generated PR and merge it to protected `main` after both `verify` jobs in **Package checks** pass. Preview the README banner on GitHub.
+2. The [Stage npm release](https://github.com/servrox/code-quality/actions/workflows/publish-release.yml) GitHub Actions workflow verifies the exact release archive and stages it automatically. Manual runs verify and upload the archive for inspection. The workflow reads the version from `package.json` in either case.
+3. Open **Staged Packages** on npm and match the version and stage ID to the staging run summary. Run `npm stage download <stage-id>` and `sha256sum <downloaded-tarball>` to match the archive to the SHA-256 in the summary. Approve with 2FA. If a run fails after submission, check the staged list before retrying the same run.
+4. Confirm `npm view @servrox/code-quality dist-tags.latest` matches the approved version. In a fresh project, run the README quickstart with that exact version in place of `latest`, confirm the installed version with `pnpm list @servrox/code-quality --depth 0`, and check the banner on npm. Create GitHub release `vVERSION` at the staging run's verified commit with the changelog entry as its notes. On the merged release PR, replace `autorelease: pending` with `autorelease: tagged`. Run **Prepare release PR** manually if more commits have landed since staging.
 
-### First release
+### Replace a rejected candidate
 
-For `0.1.0`, use `bootstrap-stage` in step 2. Restrict the `npm-bootstrap` environment to `main`. Set `NPM_BOOTSTRAP_TOKEN` there using a short-lived granular npm token with **Read and write (stage only)** package access and 2FA bypass disabled. Use the smallest scope npm offers that permits creating `@servrox/code-quality`.
+1. Cancel any queued or active staging run for the candidate. Reject its entry in **Staged Packages** if one exists. A version already approved on npm requires a new release for further fixes.
+2. Open a fix PR. Set the version in `package.json` and `.release-please-manifest.json` back to npm's `latest`, remove the abandoned release entry from `CHANGELOG.md`, and keep the source changes and fixes. Merge after both `verify` jobs pass. The release workflow verifies this version without staging it.
+3. Remove `autorelease: pending` from the abandoned release PR and run **Prepare release PR** on `main`. Merge the new release PR after CI passes. Use the new staging run's commit and digest for approval, including when Release Please reuses the version.
 
-npm can expose `0.0.0-stage` as a placeholder until the first stage is approved. After approving `0.1.0`, remove `NPM_BOOTSTRAP_TOKEN` from GitHub and revoke it in npm. Set up Trusted Publishing when the next release is ready.
+### Set up release automation
+
+Initialize `package.json` and the Release Please manifest at npm's published `latest`, with a matching GitHub release tag in `main` history. If the source already carries an unpublished version, reset only that version and remove its premature changelog entry while retaining the source changes. Manifest initialization verifies the archive without staging it. Release Please then creates the candidate version and changelog entry.
+
+1. Register a private GitHub App under your account and install it on `servrox/code-quality` only. Disable its webhook. Grant **Contents**, **Issues**, and **Pull requests** read/write so it can update release branches and labels and trigger the required PR checks. Keep branch protection active for the App.
+2. Set repository Actions variables `RELEASE_PLEASE_APP_CLIENT_ID` and `RELEASE_PLEASE_APP_SLUG` from the App settings. The slug is the App name in its `/apps/` URL. Store the generated private key as `RELEASE_PLEASE_APP_PRIVATE_KEY` in repository Actions secrets. Create the `autorelease: pending` and `autorelease: tagged` labels if they are missing.
+3. In npm's package settings, configure the **Stage only** Trusted Publisher for `servrox/code-quality`, workflow file `publish-release.yml`, and environment `npm-release`. The GitHub environment accepts `main`. Set up the binding when a new release is ready and complete the first trusted release within two days. Replace an expired binding in npm. For `ENEEDAUTH`, verify those four settings before retrying an unpublished version.
+
+The App is used for release PR preparation. The staging job uses GitHub OIDC and npm approval requires the npm maintainer's 2FA.
