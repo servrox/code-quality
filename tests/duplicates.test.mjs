@@ -155,7 +155,20 @@ void test("updating a symlink baseline fails without replacing it or its target"
   const link = path.join(cwd, baseline);
   write("source.ts", padding);
   write(target, original);
-  symlinkSync(target, link, "file");
+  try {
+    symlinkSync(target, link, "file");
+  } catch (error) {
+    if (
+      process.platform === "win32" &&
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "EPERM"
+    ) {
+      context.skip("Creating file symlinks requires Windows Developer Mode or symlink privileges.");
+      return;
+    }
+    throw error;
+  }
 
   const update = run("update-baseline", ...flags, "--", ".");
 
