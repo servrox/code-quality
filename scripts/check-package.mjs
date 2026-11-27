@@ -28,12 +28,17 @@ const run = (args, cwd) => {
 };
 
 try {
-  run(["pack", "--pack-destination", temporary], root);
-
-  const archive = readdirSync(temporary).find((name) => name.endsWith(".tgz"));
+  let [archive] = process.argv.slice(2);
 
   if (archive === undefined) {
-    throw new Error("Package archive was not created");
+    run(["pack", "--pack-destination", temporary], root);
+    const packed = readdirSync(temporary).find((name) => name.endsWith(".tgz"));
+
+    if (packed === undefined) {
+      throw new Error("Package archive was not created");
+    }
+
+    archive = path.join(temporary, packed);
   }
 
   const manifest = z
@@ -54,7 +59,7 @@ try {
       packageManager: "pnpm@12.16.1",
       devDependencies: {
         ...manifest.peerDependencies,
-        "@servrox/code-quality": `file:${path.join(temporary, archive)}`,
+        "@servrox/code-quality": `file:${path.resolve(archive)}`,
         "@types/node": manifest.devDependencies["@types/node"],
         typescript: manifest.devDependencies.typescript,
       },

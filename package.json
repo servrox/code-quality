@@ -1,13 +1,12 @@
 {
   "name": "@servrox/code-quality",
   "version": "0.1.0",
-  "private": true,
   "description": "Reusable Ultracite/Oxc presets and quality policy for servrox projects.",
   "homepage": "https://github.com/servrox/code-quality#readme",
   "bugs": {
     "url": "https://github.com/servrox/code-quality/issues"
   },
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/servrox/code-quality.git"
@@ -60,6 +59,10 @@
     },
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "lint": "ultracite check",
     "lint:policy": "oxlint --config oxlint.policy.config.mjs oxlint oxfmt src dependency-cruiser scripts",
@@ -70,8 +73,8 @@
     "verify": "pnpm check && pnpm test && pnpm test:package"
   },
   "dependencies": {
-    "eslint": "10.14.0",
-    "eslint-plugin-sonarjs": "4.2.2",
+    "eslint": "10.15.0",
+    "eslint-plugin-sonarjs": "4.2.3",
     "eslint-plugin-unicorn": "79.0.0",
     "oxlint-plugin-eslint": "1.93.0",
     "zod": "4.6.7"
