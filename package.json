@@ -12,6 +12,7 @@
     "url": "git+https://github.com/servrox/code-quality.git"
   },
   "bin": {
+    "code-quality-check": "./check/cli.mjs",
     "code-quality-duplicates": "./jscpd/cli.mjs"
   },
   "files": [
@@ -19,7 +20,8 @@
     "oxfmt",
     "jscpd",
     "dependency-cruiser",
-    "src"
+    "src",
+    "check"
   ],
   "type": "module",
   "exports": {
@@ -76,7 +78,7 @@
   },
   "scripts": {
     "lint": "ultracite check",
-    "lint:policy": "oxlint --config oxlint.policy.config.mjs oxlint oxfmt src dependency-cruiser jscpd scripts",
+    "lint:policy": "oxlint --config oxlint.policy.config.mjs oxlint oxfmt src dependency-cruiser jscpd scripts check",
     "fix": "ultracite fix",
     "check": "pnpm lint && pnpm lint:policy && tsc --noEmit && node scripts/check.mjs",
     "test": "node --test tests/*.test.mjs",
