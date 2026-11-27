@@ -8,7 +8,7 @@ Share linting, formatting, duplication, and dependency rules across TypeScript p
 
 ## Quick start
 
-Use Node.js **24.15.0 or newer**. Install the published npm package with the matching tools. The duplicate-check CLI, runtime dependency preset, and runtime configuration factory require `0.2.0` or newer. If npm `latest` is still `0.1.0`, use a reviewed Git commit below to try those additions before the next release.
+Use Node.js **24.15.0 or newer**. Install the published npm package with the matching tools. The Git-scoped check CLI, duplicate-check CLI, runtime dependency preset, and runtime configuration factory require `0.2.0` or newer. If npm `latest` is still `0.1.0`, use a reviewed Git commit below to try those additions before the next release.
 
 ```sh
 pnpm add -D -E @servrox/code-quality@latest \
@@ -78,16 +78,16 @@ Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) f
 
 ## Choose which files to check
 
-`code-quality-check` runs Oxlint and Oxfmt from the Git root and never applies fixes. Both tools use the consumer's config discovery by default. With separate configs, pass `--oxlint-config <path>` and `--oxfmt-config <path>` (relative to the invoking directory).
+`code-quality-check` runs Oxlint and Oxfmt from the Git root and never applies fixes or refreshes the Git index. Both tools use the consumer's config discovery, supported file types, ignore rules, and language associations. With separate configs, pass `--oxlint-config <path>` and `--oxfmt-config <path>` (relative to the invoking directory). Lint warning limits apply to the complete selection.
 
 | Scope | Files checked |
 | --- | --- |
-| `changed` (default) | Working-tree differences from `HEAD` or an explicit `--base <ref>`, plus non-ignored untracked files |
+| `changed` (default) | Working-tree differences from `HEAD` or an explicit `--base <ref>`, plus non-ignored untracked files. Before the first commit, the default checks all tracked and non-ignored untracked working files. An explicit base must resolve to a commit. |
 | `staged` | Files changed in the Git index. If a selected path also has unstaged changes, the command exits before checking to avoid checking different content from the one being committed. |
 | `unstaged` | Working-tree differences from the index, plus non-ignored untracked files |
 | `all` | Tracked files and non-ignored untracked files in the working tree |
 
-Scopes select whole files and skip deleted paths, symlinks, and paths outside the checkout. Git pathspecs after `--` apply to the file selection. A check with no matching files succeeds without launching the tool.
+Scopes select whole files and skip deleted paths, symlinks, and paths outside the checkout. Git pathspecs after `--` are relative to the Git root, including when invoked from a subdirectory. A check with no selected files succeeds without launching the tool. If a tool ignores every selected file or supports none of them, its check also succeeds without scanning other files.
 
 ```sh
 pnpm exec code-quality-check --scope staged --check lint
@@ -218,7 +218,7 @@ pnpm verify
 1. Core/type-aware lint, formatting and additional policy checks.
 2. TypeScript and exported-file checks.
 3. Real Oxlint boundary fixtures, baseline tests and runtime-cycle regression tests.
-4. `pnpm pack`, installation outside the checkout, all runtime exports, actual ESLint/SonarJS/Anti-Slop plugin execution and strict consumer types.
+4. `pnpm pack`, installation outside the checkout, all runtime exports, actual ESLint/SonarJS/Anti-Slop plugin execution, Git-scoped lint and format checks, and strict consumer types.
 
 Implementation files are explicit TypeScript roots; sibling declaration files are excluded from glob discovery to prevent them from hiding JavaScript sources. Imported declarations remain type-checked, including the strict packed consumer.
 
