@@ -113,16 +113,18 @@ export const normalizeKnip = (input) => {
   return findings;
 };
 
+/** @param {Finding} finding - Diagnostic to classify for baseline eligibility. */
+const isUncountableSyntax = (finding) =>
+  finding.rule === "eslint-js(no-restricted-syntax)" &&
+  !countableSyntaxMessages.has(finding.message);
+
 /** @param {readonly Finding[]} findings - Input to validate or compare. */
 export const createBaseline = (findings) => {
   /** @type {Record<string, number[]>} */
   const entries = {};
 
   for (const finding of findings) {
-    if (
-      finding.rule === "eslint-js(no-restricted-syntax)" &&
-      !countableSyntaxMessages.has(finding.message)
-    ) {
+    if (isUncountableSyntax(finding)) {
       throw new Error(
         `Resolve uncountable module syntax before baselining: ${finding.file}: ${finding.message}`
       );
@@ -145,9 +147,11 @@ export const createBaseline = (findings) => {
 /** @param {readonly Finding[]} findings - Input to validate or compare. @param {unknown} input - Input to validate or compare. */
 export const findRegressions = (findings, input) => {
   const baseline = baselineSchema.parse(input);
-  const actual = createBaseline(findings);
-  /** @type {(Finding & { allowed: number })[]} */
-  const regressions = [];
+  const actual = createBaseline(findings.filter((finding) => !isUncountableSyntax(finding)));
+
+  const regressions = findings
+    .filter(isUncountableSyntax)
+    .map((finding) => ({ ...finding, allowed: 0 }));
 
   for (const [key, values] of Object.entries(actual.entries)) {
     const budget = (baseline.entries[key] ?? []).toSorted((a, b) => b - a);
