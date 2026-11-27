@@ -1,6 +1,6 @@
 {
   "name": "@servrox/code-quality",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reusable Ultracite/Oxc presets and quality policy for servrox projects.",
   "homepage": "https://github.com/servrox/code-quality#readme",
   "bugs": {
@@ -10,6 +10,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/servrox/code-quality.git"
+  },
+  "bin": {
+    "code-quality-duplicates": "./jscpd/cli.mjs"
   },
   "files": [
     "oxlint",
@@ -53,6 +56,10 @@
       "types": "./dependency-cruiser/core.d.cts",
       "default": "./dependency-cruiser/core.cjs"
     },
+    "./dependency-cruiser/runtime": {
+      "types": "./dependency-cruiser/core.d.cts",
+      "default": "./dependency-cruiser/runtime.cjs"
+    },
     "./baseline": {
       "types": "./src/baseline.d.mts",
       "default": "./src/baseline.mjs"
@@ -65,7 +72,7 @@
   },
   "scripts": {
     "lint": "ultracite check",
-    "lint:policy": "oxlint --config oxlint.policy.config.mjs oxlint oxfmt src dependency-cruiser scripts",
+    "lint:policy": "oxlint --config oxlint.policy.config.mjs oxlint oxfmt src dependency-cruiser jscpd scripts",
     "fix": "ultracite fix",
     "check": "pnpm lint && pnpm lint:policy && tsc --noEmit && node scripts/check.mjs",
     "test": "node --test tests/*.test.mjs",
@@ -82,6 +89,7 @@
   "devDependencies": {
     "@types/node": "26.6.6",
     "dependency-cruiser": "18.9.0",
+    "jscpd": "5.4.3",
     "oxfmt": "0.78.0",
     "oxlint": "1.93.0",
     "oxlint-tsgolint": "7.0.2007",
@@ -90,12 +98,16 @@
   },
   "peerDependencies": {
     "dependency-cruiser": "18.9.0",
+    "jscpd": "5.4.3",
     "oxfmt": "0.78.0",
     "oxlint": "1.93.0",
     "ultracite": "8.2.1"
   },
   "peerDependenciesMeta": {
     "dependency-cruiser": {
+      "optional": true
+    },
+    "jscpd": {
       "optional": true
     }
   },

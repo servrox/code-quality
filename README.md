@@ -78,25 +78,40 @@ Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) f
 
 ## Public exports
 
-| Export                | Responsibility                                             |
-| --------------------- | ---------------------------------------------------------- |
-| `/oxlint/core`        | Ultracite core                                             |
-| `/oxlint/strict`      | Native complexity/size rules, selected Unicorn and SonarJS |
-| `/oxlint/modularity`  | File length and syntax-based function/export budgets       |
-| `/oxlint/anti-slop`   | Ultracite's bundled Anti-Slop                              |
-| `/oxlint/react`       | Ultracite React rules                                      |
-| `/oxlint/playwright`  | Native Ultracite Playwright compatibility overrides        |
-| `/oxfmt`              | Ultracite formatting, 100-column width                     |
-| `/jscpd`              | Duplicate-detection defaults, 3% target                    |
-| `/dependency-cruiser` | Runtime-cycle policy and runtime resolution defaults       |
-| `/baseline`           | Validated reports and non-increasing diagnostic budgets    |
-| `/package.json`       | Version and export metadata                                |
+| Export                        | Responsibility                                             |
+| ----------------------------- | ---------------------------------------------------------- |
+| `/oxlint/core`                | Ultracite core                                             |
+| `/oxlint/strict`              | Native complexity/size rules, selected Unicorn and SonarJS |
+| `/oxlint/modularity`          | File length and syntax-based function/export budgets       |
+| `/oxlint/anti-slop`           | Ultracite's bundled Anti-Slop                              |
+| `/oxlint/react`               | Ultracite React rules                                      |
+| `/oxlint/playwright`          | Native Ultracite Playwright compatibility overrides        |
+| `/oxfmt`                      | Ultracite formatting, 100-column width                     |
+| `/jscpd`                      | Duplicate-detection defaults, 3% total limit               |
+| `/dependency-cruiser`         | Runtime-cycle policy and runtime resolution defaults       |
+| `/dependency-cruiser/runtime` | Runtime cycles and invalid runtime imports                 |
+| `/baseline`                   | Validated reports and non-increasing diagnostic budgets    |
+| `/package.json`               | Version and export metadata                                |
 
 The Playwright export is the limited native Ultracite preset, not the complete `eslint-plugin-playwright` rule set. Solid, TanStack, Jest, Vitest and Storybook are not forced on unrelated consumers.
 
 Dependency Cruiser is an **optional peer**. Install `dependency-cruiser@18.9.0` only when using that export. Its analyzer requires a supported TypeScript compiler API; projects using TypeScript 7.0 can supply TypeScript 6.0.3 to that tool through pnpm `packageExtensions`, as this repository does for tests.
 
 When enforcing application imports against external tooling, retain dependency edges into `node_modules` with `doNotFollow`; excluding those targets completely would remove the edges that the boundary rule needs.
+
+The opt-in runtime preset adds errors for unresolved imports, installed npm dependencies omitted from the manifest, and runtime imports of `@servrox/code-quality`. Pass the runtime roots to `depcruise` from the consumer and add its own package boundaries and TypeScript aliases there. If the consumer ships runtime code without its devDependencies, it can also add a scoped `npm-dev` rule. Packaged Electron apps can resolve Electron as a devDependency while providing it at runtime, so apply that rule only where the manifest classification reflects deployment.
+
+## Duplicate checks
+
+Install the optional `jscpd@5.4.3` peer when using the `code-quality-duplicates` binary. The check allows at most 3% duplicated lines across the scan and zero new clones relative to the project's native baseline. It prints the native jscpd report and exits with the analyzer's status.
+
+```sh
+pnpm exec code-quality-duplicates update-baseline --baseline tools/duplicates.json -- src
+pnpm exec code-quality-duplicates check --baseline tools/duplicates.json -- src
+pnpm exec code-quality-duplicates report -- src
+```
+
+Use `update-baseline` for an explicitly reviewed baseline change. The destination directory must exist. Reuse the same roots and exclusions in each mode, adding `--ignore <glob>` as needed. A consumer may set `--threshold 0` to disallow all detected duplication.
 
 Runtime-cycle analysis excludes erased type-only imports **before** detecting cycles. Filtering a reported cycle afterwards can miss a runtime cycle when shorter type-only cycles overlap it. Supply the project's actual TypeScript configuration: the graph follows its emit semantics. For native TypeScript type-stripping runtimes, use `verbatimModuleSyntax: true` so unused value imports remain runtime edges.
 

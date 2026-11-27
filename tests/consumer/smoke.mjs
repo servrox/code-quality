@@ -48,4 +48,8 @@ assert.ok(strict.findings.some((finding) => finding.rule === "sonarjs(prefer-imm
 const antiSlop = lint("const options = { ...(enabled ? { flag: true } : {}) };", "anti-slop");
 assert.ok(antiSlop.findings.some((finding) => finding.rule === "anti-slop(no-conditional-empty-object-spread)"));
 
+writeFileSync("duplicate-scan.ts", Array.from(
+  { length: 20 }, (_, index) => "export const value" + index + " = " + index + ";"
+).join("\n"));
+
 console.log("Installed exports, plugin resolution and package file allowlist passed.");

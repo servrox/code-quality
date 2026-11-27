@@ -2,6 +2,7 @@ import type { IConfiguration } from "dependency-cruiser";
 import type { OxfmtConfig } from "oxfmt";
 import type { OxlintConfig } from "oxlint";
 import architecture from "@servrox/code-quality/dependency-cruiser";
+import runtime from "@servrox/code-quality/dependency-cruiser/runtime";
 import duplicates from "@servrox/code-quality/jscpd" with { type: "json" };
 import format from "@servrox/code-quality/oxfmt";
 import antiSlop from "@servrox/code-quality/oxlint/anti-slop";
@@ -14,7 +15,7 @@ import { createBaseline, findRegressions, normalizeKnip, normalizeLint, type Fin
 
 const presets: OxlintConfig[] = [core, strict, modularity, antiSlop, react, playwright];
 const formatter: OxfmtConfig = format;
-const graph: IConfiguration = { ...architecture, forbidden: [...architecture.forbidden] };
+const graph: IConfiguration = { ...architecture, forbidden: [...runtime.forbidden] };
 const findings: Finding[] = normalizeLint({ number_of_files: 1, diagnostics: [] });
 const baseline = createBaseline(findings);
 const version: 1 = baseline.version;
