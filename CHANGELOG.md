@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Duplicate checks default to zero detected duplication when run without a baseline. Setup guidance starts with fixing the findings and requires maintainer approval for baseline adoption.
+- Reject symlink paths when updating a jscpd baseline. The symlink and its target are preserved.
 
 ## 0.1.0
 

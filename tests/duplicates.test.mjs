@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -51,6 +58,7 @@ const createFixture = (context) => {
   };
 
   return {
+    cwd,
     write,
     readBaseline: () => readFileSync(path.join(cwd, baseline), "utf-8"),
     run,
@@ -138,4 +146,21 @@ void test("missing and malformed baselines fail, and an empty scan fails closed"
   const empty = run("report", "--", ".");
   assert.equal(empty.status, 1, empty.output);
   assert.match(empty.output, /no files|zero files|0 files/iu);
+});
+
+void test("updating a symlink baseline fails without replacing it or its target", (context) => {
+  const { cwd, write, run } = createFixture(context);
+  const target = "native-baseline.json";
+  const original = '{"version":1,"fingerprints":{}}';
+  const link = path.join(cwd, baseline);
+  write("source.ts", padding);
+  write(target, original);
+  symlinkSync(target, link, "file");
+
+  const update = run("update-baseline", ...flags, "--", ".");
+
+  assert.equal(update.status, 1, update.output);
+  assert.match(update.output, /symbolic link/u);
+  assert.equal(readlinkSync(link), target);
+  assert.equal(readFileSync(path.join(cwd, target), "utf-8"), original);
 });
