@@ -7,6 +7,8 @@ pnpm install --frozen-lockfile
 pnpm verify
 ```
 
+For release automation changes, also run `node --test tests/release/*.test.mjs` with Bash, Git, and jq available. These tests execute the workflow guards against temporary Git histories and mock the external GitHub and npm responses. CI runs them on both supported Node versions.
+
 1. Open an issue for a new preset, rule, or dependency policy so maintainers can discuss its consumer impact with you.
 2. Submit a focused pull request. Explain which presets or consumers are affected and update the examples and changelog when behavior changes.
 3. Run `pnpm verify` and include the result in the PR. The packed-consumer test checks runtime exports, plugin resolution, and strict TypeScript declarations.

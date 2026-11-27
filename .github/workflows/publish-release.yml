@@ -139,9 +139,13 @@ jobs:
           set -euo pipefail
           main=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq 'select(.protected) | .commit.sha')
           test "$(git rev-parse HEAD)" = "$main"
+          git merge-base --is-ancestor "$GITHUB_SHA" "$main"
+          # A rebased release PR may end with a changelog-only follow-up commit.
+          # Compare version transitions so reusing an abandoned version stays blocked.
+          candidate_manifest_change=$(git log --first-parent -1 --format=%H "$GITHUB_SHA" -- .release-please-manifest.json)
           last_manifest_change=$(git log --first-parent -1 --format=%H "$main" -- .release-please-manifest.json)
-          if [[ "$last_manifest_change" != "$GITHUB_SHA" ]]; then
-            echo '::error::The verified commit no longer sets the release version on main.'
+          if [[ "$last_manifest_change" != "$candidate_manifest_change" ]]; then
+            echo '::error::The verified candidate no longer sets the release version on main.'
             exit 1
           fi
           test "$(jq -er .version package.json)" = "$RELEASE_VERSION"
