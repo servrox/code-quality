@@ -8,10 +8,10 @@ Share linting, formatting, duplication, and dependency rules across TypeScript p
 
 ## Quick start
 
-Use Node.js **24.15.0 or newer**. Once `0.1.0` is available on npm, install it with the matching tools.
+Use Node.js **24.15.0 or newer**. Install the npm package with the matching tools.
 
 ```sh
-pnpm add -D -E @servrox/code-quality@0.1.0 \
+pnpm add -D -E @servrox/code-quality@latest \
   ultracite@8.2.1 oxlint@1.93.0 oxfmt@0.78.0 oxlint-tsgolint@7.0.2007
 ```
 

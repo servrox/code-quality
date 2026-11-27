@@ -1,6 +1,6 @@
 # ADR 0001. Stage npm releases from GitHub Actions
 
-Status: Accepted
+Status: Superseded by [ADR 0002](0002-automate-npm-release-staging.md)
 
 ## Context
 
