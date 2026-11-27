@@ -70,6 +70,61 @@ For an existing codebase, run the additional checks directly and fix the reporte
 
 Run `pnpm exec ultracite check` from the project root. Commit the manifest and lockfile with your project configs. Use `pnpm install --frozen-lockfile` in CI.
 
+### Adapt the presets to a monorepo
+
+Declare framework roots in the consumer config. Apply React rules to Next.js and other React workspaces, including their TypeScript hooks. Include explicit ESM/CommonJS extensions (`.mjs`, `.cjs`, `.mts`, `.cts`) so those modules receive the same checks. Apply the Next.js plugin and its root setting to the Next.js apps. List shared UI packages explicitly.
+
+```ts
+import react from "@servrox/code-quality/oxlint/react";
+import { defineConfig } from "oxlint";
+
+const nextRoots = ["apps/storefront", "apps/admin"];
+const nextFiles = nextRoots.map((root) => `${root}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}`);
+
+export default defineConfig({
+  // Add these settings and overrides to the quick-start config.
+  settings: { next: { rootDir: nextRoots } },
+  overrides: [
+    {
+      files: nextFiles,
+      env: { browser: true },
+      plugins: [...react.plugins, "nextjs"],
+      rules: react.rules,
+    },
+    {
+      files: [
+        "apps/docs/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+        "packages/ui/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+      ],
+      env: { browser: true },
+      plugins: react.plugins,
+      rules: react.rules,
+    },
+  ],
+});
+```
+
+Set import aliases, ordering, and Tailwind helpers in the consumer's formatter config. For Tailwind v4, resolve the stylesheet path from the config file so it is stable when invoked from different workspace directories.
+
+```ts
+import path from "node:path";
+
+import shared from "@servrox/code-quality/oxfmt";
+import { defineConfig } from "oxfmt";
+
+export default defineConfig({
+  ...shared,
+  sortImports: { ...shared.sortImports, internalPattern: ["@repo/", "@/"] },
+  sortTailwindcss: {
+    ...shared.sortTailwindcss,
+    functions: ["clsx", "cn", "cva"],
+    stylesheet: path.resolve(import.meta.dirname, "packages/ui/src/styles/globals.css"),
+  },
+});
+```
+
+Use precise ignore patterns for generated artifacts. For package entrypoints declared in a manifest, an exact-file Oxlint override can retain `functionRestrictions` from `@servrox/code-quality/oxlint/modularity` as the `eslint-js/no-restricted-syntax` options. That keeps the function budget in those entrypoints while permitting their public export surface.
+
 ### Set up with a coding agent
 
 Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) for installation and usage instructions for your agent. Give the agent this setup prompt from your project root.
