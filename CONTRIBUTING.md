@@ -15,10 +15,10 @@ The [security policy](SECURITY.md) describes private reporting.
 
 ## Release checklist
 
-1. Merge the reviewed package version and changelog to protected `main`. In [Stage npm release](https://github.com/servrox/code-quality/actions/workflows/publish-release.yml), run `verify` with the exact version in `package.json`. Review the uploaded tarball and its `SHA256SUMS`.
+1. Preview the README banner on GitHub and merge the reviewed package version and changelog to protected `main`. In [Stage npm release](https://github.com/servrox/code-quality/actions/workflows/publish-release.yml), run `verify` with the exact version in `package.json`. Review the uploaded tarball and its `SHA256SUMS`.
 2. Use `trusted-stage` on `main` for subsequent releases. Before the first such release, configure `servrox/code-quality`, `publish-release.yml`, and the `npm-release` environment as a stage-only trusted publisher in npm. Configure the GitHub environment to accept deployments from `main`. Complete the first trusted release within two days of creating the binding. Delete and recreate it if it expires.
 3. Open npm's **Staged Packages** tab. Match the version and stage ID to the workflow summary, and confirm that the SHA-256 of the downloaded staged tarball matches the summary. Approve with 2FA. If the submission result is unclear, check the staged list before rerunning. Reject a bad stage before approval and publish a new version for fixes after approval.
-4. Run `npm view @servrox/code-quality version` and `npm view @servrox/code-quality@VERSION dist.integrity` with the released version in place of `VERSION`. Repeat the README quickstart in a fresh project. Create `vVERSION` and the matching GitHub release at the verified commit with the changelog entry as release notes.
+4. Confirm that `npm view @servrox/code-quality dist-tags.latest` matches the released version. Check `npm view @servrox/code-quality@VERSION dist.integrity` with that version in place of `VERSION`. Check the banner on the npm package page and repeat the README quickstart in a fresh project. Create `vVERSION` and the matching GitHub release at the verified commit with the changelog entry as release notes.
 
 ### First release
 
