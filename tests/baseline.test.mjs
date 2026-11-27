@@ -43,10 +43,34 @@ void test("uncountable module syntax cannot be accepted by a baseline refresh", 
     )
   );
   assert.throws(() => createBaseline(items), /uncountable module syntax/u);
-  assert.throws(
-    () => findRegressions(items, { version: 1, entries: {} }),
-    /uncountable module syntax/u
+});
+
+void test("regression checks report uncountable syntax alongside budget increases", () => {
+  const [grouped, wildcard, longer] = findings(
+    diagnostic(
+      "Export one symbol per statement outside explicit package entrypoints.",
+      "eslint-js(no-restricted-syntax)"
+    ),
+    diagnostic(
+      "Wildcard exports are restricted to explicit package entrypoints.",
+      "eslint-js(no-restricted-syntax)",
+      "apps/b.ts"
+    ),
+    diagnostic("File has too many lines (451).")
   );
+  const baseline = createBaseline(findings(diagnostic("File has too many lines (450).")));
+
+  for (const item of [grouped, wildcard]) {
+    const key = JSON.stringify([item.file, item.rule, item.message]);
+
+    baseline.entries[key] = [100];
+  }
+
+  assert.deepEqual(findRegressions([grouped, wildcard, longer], baseline), [
+    { ...grouped, allowed: 0 },
+    { ...wildcard, allowed: 0 },
+    { ...longer, allowed: 450 },
+  ]);
 });
 
 void test("named complexity and cognitive complexity compare numeric values", () => {

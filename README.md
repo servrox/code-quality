@@ -110,7 +110,7 @@ These limits are policy choices. Each project must still review cohesion and int
 
 ## Baseline helpers
 
-`normalizeLint` validates Oxlint JSON; `normalizeKnip` validates Knip 6 JSON. `createBaseline` groups findings by file, rule and normalized message. `findRegressions` compares the current values with committed allowances.
+`normalizeLint` validates Oxlint JSON; `normalizeKnip` validates Knip 6 JSON. `createBaseline` groups findings by file, rule and normalized message. `findRegressions` compares the current values with committed allowances. Uncountable module syntax is reported with an allowance of zero alongside other regressions. Baseline creation rejects that syntax.
 
 Knip member and catalog identities retain their declared owner, for example `First["Unused"]`; an allowance for one enum, namespace or catalog cannot cover a same-named member in another. Export/type identities use the declaration's name: their reported namespace is a consumer-local import alias, so changing that alias does not change the budget.
 
