@@ -72,14 +72,14 @@ Run `pnpm exec ultracite check` from the project root. Commit the manifest and l
 
 ### Adapt the presets to a monorepo
 
-Declare framework roots in the consumer config. Apply React rules to Next.js and other React workspaces, including their TypeScript hooks. Apply the Next.js plugin and its root setting to the Next.js apps. List shared UI packages explicitly.
+Declare framework roots in the consumer config. Apply React rules to Next.js and other React workspaces, including their TypeScript hooks. Include explicit ESM/CommonJS extensions (`.mjs`, `.cjs`, `.mts`, `.cts`) so those modules receive the same checks. Apply the Next.js plugin and its root setting to the Next.js apps. List shared UI packages explicitly.
 
 ```ts
 import react from "@servrox/code-quality/oxlint/react";
 import { defineConfig } from "oxlint";
 
 const nextRoots = ["apps/storefront", "apps/admin"];
-const nextFiles = nextRoots.map((root) => `${root}/**/*.{js,jsx,ts,tsx}`);
+const nextFiles = nextRoots.map((root) => `${root}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}`);
 
 export default defineConfig({
   // Add these settings and overrides to the quick-start config.
@@ -92,7 +92,10 @@ export default defineConfig({
       rules: react.rules,
     },
     {
-      files: ["apps/docs/**/*.{js,jsx,ts,tsx}", "packages/ui/**/*.{js,jsx,ts,tsx}"],
+      files: [
+        "apps/docs/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+        "packages/ui/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+      ],
       env: { browser: true },
       plugins: react.plugins,
       rules: react.rules,
