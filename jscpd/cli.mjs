@@ -28,6 +28,12 @@ const defaults = z
   .looseObject({ threshold: z.number(), ignore: z.array(z.string()) })
   .parse(preset);
 
+const thresholdWithoutBaseline = {
+  check: 0,
+  report: defaults.threshold,
+  "update-baseline": defaults.threshold,
+};
+
 const baselineSchema = z.object({
   version: z.literal(1),
   fingerprints: z.record(z.string().regex(/^[0-9a-f]{16}$/u), z.number().int().positive()),
@@ -58,9 +64,14 @@ const resolveRunner = () => {
   return fileURLToPath(new URL(bin.jscpd, manifest));
 };
 
-/** @param {string | undefined} value - Optional total limit. */
-const parseThreshold = (value) => {
-  const threshold = Number(value ?? defaults.threshold);
+/**
+ * @param {string | undefined} value - Optional total limit.
+ * @param {z.infer<typeof modes>} mode - Scan mode.
+ * @param {string | undefined} baseline - Explicit baseline path.
+ */
+const parseThreshold = (value, mode, baseline) => {
+  const fallback = baseline === undefined ? thresholdWithoutBaseline[mode] : defaults.threshold;
+  const threshold = Number(value ?? fallback);
 
   if (value?.trim() === "" || !Number.isFinite(threshold) || threshold < 0 || threshold > 100) {
     throw new Error("--threshold must be a percentage between 0 and 100.");
@@ -86,20 +97,21 @@ const parseInvocation = () => {
 
   const mode = modes.parse(positionals[0]);
   const roots = z.array(z.string().min(1)).min(1).parse(positionals.slice(1));
-  const threshold = parseThreshold(values.threshold);
 
   const baseline =
     values.baseline === undefined
       ? undefined
       : path.resolve(z.string().min(1).parse(values.baseline));
 
-  if (mode !== "report" && baseline === undefined) {
+  if (mode === "update-baseline" && baseline === undefined) {
     throw new Error(`${mode} requires --baseline <file>.`);
   }
 
   if (mode === "report" && baseline !== undefined) {
     throw new Error("report does not use a baseline.");
   }
+
+  const threshold = parseThreshold(values.threshold, mode, baseline);
 
   return { mode, roots, threshold, baseline, ignore: values.ignore };
 };
@@ -120,7 +132,7 @@ const runScan = ({ mode, roots, threshold, baseline, ignore }, directory) => {
 
   const args = [resolveRunner(), "--config", config, "--fail-on-empty", "--no-tips"];
 
-  if (mode === "check") {
+  if (mode === "check" && baseline !== undefined) {
     readBaseline(baseline);
     console.log(`Duplicate limits: ${threshold}% total and 0 new clones.`);
     args.push("--fail-on-new-clones", "0");

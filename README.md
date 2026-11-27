@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/%40servrox%2Fcode-quality)](https://www.npmjs.com/package/@servrox/code-quality) [![Package checks](https://github.com/servrox/code-quality/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/servrox/code-quality/actions/workflows/ci.yml) [![Apache-2.0 license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/servrox/code-quality/blob/main/LICENSE)
 
-Share linting, formatting, duplication, and dependency rules across TypeScript projects. The package provides versioned Ultracite and Oxc presets tested together. Each consumer owns its framework selection, paths, and migration baselines.
+Share linting, formatting, duplication, and dependency rules across TypeScript projects. The package provides versioned Ultracite and Oxc presets tested together. Each consumer owns its framework selection, and scan paths.
 
 ## Quick start
 
@@ -66,7 +66,7 @@ export default defineConfig({
 
 Projects keep root-only Oxlint options at their root. Environments, ignores and framework-specific paths remain explicit in each consumer. React applies only to React workspaces. Enable other framework tooling when the project adopts it.
 
-For an existing codebase, introduce additional policies separately from an already-passing core gate. The optional baseline helpers support measured adoption; this repository contains **no application baselines**.
+For an existing codebase, run the additional checks directly and fix the reported findings. Use the optional baseline helpers only after the maintainer explicitly approves a scoped migration exception.
 
 Run `pnpm exec ultracite check` from the project root. Commit the manifest and lockfile with your project configs. Use `pnpm install --frozen-lockfile` in CI.
 
@@ -74,7 +74,7 @@ Run `pnpm exec ultracite check` from the project root. Commit the manifest and l
 
 Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) for installation and usage instructions for your agent. Give the agent this setup prompt from your project root.
 
-> Set up `@servrox/code-quality` using the [package quick start](https://github.com/servrox/code-quality#quick-start). Inspect the existing lint and format configs, package scripts, and CI first. Use an exact public npm version, or a reviewed full Git SHA if the version is unavailable. Wire the presets into the existing config, run the project's checks, and report any existing failures before expanding the enforced rules.
+> Set up `@servrox/code-quality` using the [package quick start](https://github.com/servrox/code-quality#quick-start). Inspect the existing lint and format configs, package scripts, and CI first. Use an exact public npm version, or a reviewed full Git SHA if the version is unavailable. Wire the presets into the existing config, run the project's checks, and fix the reported findings. Get explicit maintainer approval before creating or using a baseline.
 
 ## Public exports
 
@@ -126,15 +126,20 @@ Add project-specific options and boundaries to this config as needed, retaining 
 
 ## Duplicate checks
 
-Install the optional `jscpd@5.4.3` peer when using the `code-quality-duplicates` binary. The check allows at most 3% duplicated lines across the scan and zero new clones relative to the project's native baseline. It prints the native jscpd report and exits with the analyzer's status.
+Install the optional `jscpd@5.4.3` peer to use the `code-quality-duplicates` CLI. Start with the strict check. It prints the native report and fails for any detected duplication.
+
+```sh
+pnpm exec code-quality-duplicates check -- src
+```
+
+For an explicitly approved migration, create and use a native baseline:
 
 ```sh
 pnpm exec code-quality-duplicates update-baseline --baseline tools/duplicates.json -- src
 pnpm exec code-quality-duplicates check --baseline tools/duplicates.json -- src
-pnpm exec code-quality-duplicates report -- src
 ```
 
-Use `update-baseline` for an explicitly reviewed baseline change. The destination directory must exist. Reuse the same roots and exclusions in each mode, adding `--ignore <glob>` as needed. A consumer may set `--threshold 0` to disallow all detected duplication.
+A baseline-backed check defaults to 3% duplicated lines and fails on any new clone. Reuse the same roots and exclusions in each mode. Use `--ignore <glob>` for extra exclusions and `--threshold` to set an explicit limit. The destination directory must exist. For a symlinked baseline, pass the target file when updating it.
 
 ## Limits and counting
 
@@ -158,6 +163,8 @@ Value, type, default and namespace ESM exports count. Grouped declarations, spec
 These limits are policy choices. Each project must still review cohesion and intentional public API boundaries.
 
 ## Baseline helpers
+
+Use these helpers only for an explicitly approved migration exception.
 
 `normalizeLint` validates Oxlint JSON; `normalizeKnip` validates Knip 6 JSON. `createBaseline` groups findings by file, rule and normalized message. `findRegressions` compares the current values with committed allowances. Uncountable module syntax is reported with an allowance of zero alongside other regressions. Baseline creation rejects that syntax.
 
