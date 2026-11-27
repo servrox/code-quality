@@ -59,6 +59,22 @@ const createFixture = (context) => {
 
 const flags = ["--baseline", baseline];
 
+void test("check requires zero duplication by default without a baseline", (context) => {
+  const { write, run } = createFixture(context);
+  write("first.ts", copy);
+  write("padding.ts", padding);
+  const clean = run("check", "--", ".");
+  assert.equal(clean.status, 0, clean.output);
+
+  write("second.ts", copy);
+  const strict = run("check", "--", ".");
+  assert.equal(strict.status, 1, strict.output);
+  assert.match(strict.output, /too many duplicates/u);
+
+  const explicitLimit = run("check", "--threshold", "3", "--", ".");
+  assert.equal(explicitLimit.status, 0, explicitLimit.output);
+});
+
 void test("check accepts known copies below 3% and fails on a new clone without writing", (context) => {
   const { write, run, readBaseline } = createFixture(context);
   write("first.ts", copy);
