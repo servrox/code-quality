@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
   renameSync,
@@ -156,6 +157,11 @@ const runScan = ({ mode, roots, threshold, baseline, ignore }, directory) => {
 const updateBaseline = (invocation, directory) => {
   const { baseline } = invocation;
   const candidate = path.join(directory, "baseline.json");
+  const destination = lstatSync(baseline, { throwIfNoEntry: false });
+
+  if (destination !== undefined && destination.isSymbolicLink()) {
+    throw new Error("The jscpd baseline is a symbolic link. Update its target directly.");
+  }
 
   if (existsSync(baseline)) {
     copyFileSync(baseline, candidate);
