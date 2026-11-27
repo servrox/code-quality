@@ -78,20 +78,21 @@ Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) f
 
 ## Public exports
 
-| Export                        | Responsibility                                             |
-| ----------------------------- | ---------------------------------------------------------- |
-| `/oxlint/core`                | Ultracite core                                             |
-| `/oxlint/strict`              | Native complexity/size rules, selected Unicorn and SonarJS |
-| `/oxlint/modularity`          | File length and syntax-based function/export budgets       |
-| `/oxlint/anti-slop`           | Ultracite's bundled Anti-Slop                              |
-| `/oxlint/react`               | Ultracite React rules                                      |
-| `/oxlint/playwright`          | Native Ultracite Playwright compatibility overrides        |
-| `/oxfmt`                      | Ultracite formatting, 100-column width                     |
-| `/jscpd`                      | Duplicate-detection defaults, 3% total limit               |
-| `/dependency-cruiser`         | Runtime-cycle policy and runtime resolution defaults       |
-| `/dependency-cruiser/runtime` | Runtime cycles and invalid runtime imports                 |
-| `/baseline`                   | Validated reports and non-increasing diagnostic budgets    |
-| `/package.json`               | Version and export metadata                                |
+| Export | Responsibility |
+| --- | --- |
+| `/oxlint/core` | Ultracite core |
+| `/oxlint/strict` | Native complexity/size rules, selected Unicorn and SonarJS |
+| `/oxlint/modularity` | File length and syntax-based function/export budgets |
+| `/oxlint/anti-slop` | Ultracite's bundled Anti-Slop |
+| `/oxlint/react` | Ultracite React rules |
+| `/oxlint/playwright` | Native Ultracite Playwright compatibility overrides |
+| `/oxfmt` | Ultracite formatting, 100-column width |
+| `/jscpd` | Duplicate-detection defaults, 3% total limit |
+| `/dependency-cruiser` | Runtime-cycle policy and runtime resolution defaults |
+| `/dependency-cruiser/runtime` | Runtime cycles and invalid runtime imports |
+| `/dependency-cruiser/create-runtime-config` | Runtime policy bound to an explicit analysis directory |
+| `/baseline` | Validated reports and non-increasing diagnostic budgets |
+| `/package.json` | Version and export metadata |
 
 The Playwright export is the limited native Ultracite preset, not the complete `eslint-plugin-playwright` rule set. Solid, TanStack, Jest, Vitest and Storybook are not forced on unrelated consumers.
 
@@ -104,6 +105,24 @@ The opt-in runtime preset adds errors for unresolved imports, installed npm depe
 Dependency Cruiser 18.9.0 checks `package.json` import aliases such as `#foo` against the alias name instead of the mapped npm package. These aliases are excluded only from the declaration rule to avoid rejecting valid imports. The consumer must validate the mapped packages' manifest declarations. Unresolved aliases and aliases importing quality tooling still fail their respective rules.
 
 Runtime-cycle analysis excludes erased type-only imports **before** detecting cycles. Filtering a reported cycle afterwards can miss a runtime cycle when shorter type-only cycles overlap it. Supply the project's actual TypeScript configuration: the graph follows its emit semantics. For native TypeScript type-stripping runtimes, use `verbatimModuleSyntax: true` so unused value imports remain runtime edges.
+
+### Runtime analysis from another directory
+
+The `/dependency-cruiser/runtime` preset uses the working directory when it is loaded. For a different analysis root, use the factory so Dependency Cruiser's `baseDir` and the linked quality-package boundary are generated together. For example, in the repository's `dependency-cruiser.config.mjs`:
+
+```js
+import { fileURLToPath } from "node:url";
+
+import createRuntimeConfig from "@servrox/code-quality/dependency-cruiser/create-runtime-config";
+
+export default createRuntimeConfig({
+  baseDir: fileURLToPath(new URL("./apps/api/", import.meta.url)),
+});
+```
+
+From the repository root, run `pnpm exec depcruise --config dependency-cruiser.config.mjs --output-type err-long src`. Here `src` is relative to the generated `options.baseDir`, so it scans `apps/api/src`.
+
+Add project-specific options and boundaries to this config as needed, retaining its generated `baseDir`. Overriding `options.baseDir` on an already-created preset would leave its linked-package matcher relative to the previous directory. Calling the factory without arguments uses the current working directory. Other workspace packages keep their normal symlink resolution.
 
 ## Duplicate checks
 

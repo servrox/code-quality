@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import manifest from "@servrox/code-quality/package.json" with { type: "json" };
@@ -47,6 +47,30 @@ assert.ok(strict.findings.some((finding) => finding.rule === "sonarjs(prefer-imm
 
 const antiSlop = lint("const options = { ...(enabled ? { flag: true } : {}) };", "anti-slop");
 assert.ok(antiSlop.findings.some((finding) => finding.rule === "anti-slop(no-conditional-empty-object-spread)"));
+
+const runtimeBaseDir = path.join(process.cwd(), "runtime-roots");
+const runtimeEntry = path.join(runtimeBaseDir, "entry.mjs");
+mkdirSync(runtimeBaseDir);
+writeFileSync("runtime-config.mjs",
+  'import createRuntimeConfig from "@servrox/code-quality/dependency-cruiser/create-runtime-config";\n' +
+  'export default createRuntimeConfig({ baseDir: ' + JSON.stringify(runtimeBaseDir) + ' });\n');
+
+const depcruise = fileURLToPath(new URL("../../bin/dependency-cruiser.mjs", import.meta.resolve("dependency-cruiser")));
+const cruise = (source) => {
+  writeFileSync(runtimeEntry, source);
+  const result = spawnSync(process.execPath,
+    [depcruise, "--config", "runtime-config.mjs", "--output-type", "err-long", "entry.mjs"],
+    { encoding: "utf8", timeout: 15_000, maxBuffer: 1024 * 1024 });
+  assert.equal(result.error, undefined);
+  assert.ok(result.status === 0 || result.status === 1, result.stderr);
+  return { status: result.status, output: result.stdout + result.stderr };
+};
+
+const runtimeClean = cruise('import "node:fs";');
+assert.equal(runtimeClean.status, 0, runtimeClean.output);
+const runtimeTooling = cruise('import "@servrox/code-quality/dependency-cruiser";');
+assert.equal(runtimeTooling.status, 1, runtimeTooling.output);
+assert.match(runtimeTooling.output, /no-runtime-to-quality-tooling: entry\.mjs →/u);
 
 writeFileSync("duplicate-scan.ts", Array.from(
   { length: 20 }, (_, index) => "export const value" + index + " = " + index + ";"

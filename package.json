@@ -60,6 +60,10 @@
       "types": "./dependency-cruiser/core.d.cts",
       "default": "./dependency-cruiser/runtime.cjs"
     },
+    "./dependency-cruiser/create-runtime-config": {
+      "types": "./dependency-cruiser/create-runtime-config.d.cts",
+      "default": "./dependency-cruiser/create-runtime-config.cjs"
+    },
     "./baseline": {
       "types": "./src/baseline.d.mts",
       "default": "./src/baseline.mjs"

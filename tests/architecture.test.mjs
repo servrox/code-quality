@@ -11,34 +11,43 @@ const binary = fileURLToPath(
 );
 const preset = new URL("../dependency-cruiser/core.cjs", import.meta.url).href;
 const runtimePreset = new URL("../dependency-cruiser/runtime.cjs", import.meta.url).href;
+const runtimeFactory = new URL("../dependency-cruiser/create-runtime-config.cjs", import.meta.url)
+  .href;
 
 /**
  * @param {Record<string, string>} files - Fixture modules and package manifests.
  * @param {string} profile - Preset to load.
  * @param {Record<string, string>} links - Fixture symlinks to package roots.
+ * @param {{ fromParent?: boolean; factory?: boolean; absoluteRoots?: boolean }} settings - Configuration loading mode.
  */
-const cruiseFixture = (files, profile = preset, links = {}) => {
+const cruiseFixture = (files, profile = preset, links = {}, settings = {}) => {
   const directory = mkdtempSync(path.join(tmpdir(), "quality-architecture-"));
+  const consumer = settings.fromParent === true ? path.join(directory, "consumer") : directory;
 
   try {
     for (const [name, source] of Object.entries(files)) {
-      const target = path.join(directory, name);
+      const target = path.join(consumer, name);
       mkdirSync(path.dirname(target), { recursive: true });
       writeFileSync(target, source);
     }
     for (const [name, destination] of Object.entries(links)) {
-      const target = path.join(directory, name);
+      const target = path.join(consumer, name);
       mkdirSync(path.dirname(target), { recursive: true });
       symlinkSync(destination, target, "junction");
     }
     writeFileSync(
-      path.join(directory, "tsconfig.json"),
+      path.join(consumer, "tsconfig.json"),
       JSON.stringify({ compilerOptions: { module: "ESNext", verbatimModuleSyntax: true } })
     );
+    const initialize =
+      settings.factory === true
+        ? `shared(${settings.fromParent === true ? '{ baseDir: "consumer" }' : ""})`
+        : "shared";
     writeFileSync(
       path.join(directory, "dependency-cruiser.config.mjs"),
       `import shared from ${JSON.stringify(profile)};\n` +
-        'export default { ...shared, options: { ...shared.options, tsConfig: { fileName: "tsconfig.json" } } };\n'
+        `const config = ${initialize};\n` +
+        `export default { ...config, options: { ...config.options, tsConfig: { fileName: ${JSON.stringify(path.join(consumer, "tsconfig.json"))} } } };\n`
     );
 
     const result = spawnSync(
@@ -49,7 +58,9 @@ const cruiseFixture = (files, profile = preset, links = {}) => {
         "dependency-cruiser.config.mjs",
         "--output-type",
         "err-long",
-        ...Object.keys(files).filter((file) => file.endsWith(".ts")),
+        ...Object.keys(files)
+          .filter((file) => file.endsWith(".ts"))
+          .map((file) => (settings.absoluteRoots === true ? path.join(consumer, file) : file)),
       ],
       { cwd: directory, encoding: "utf-8", timeout: 15_000, maxBuffer: 1024 * 1024 }
     );
@@ -198,4 +209,62 @@ void test("runtime preset catches a linked installation of the quality package",
     assert.equal(result.status, 1, result.output);
     assert.match(result.output, /no-runtime-to-quality-tooling/u);
   }
+});
+
+void test("runtime factory keeps linked tooling forbidden when baseDir differs from cwd", () => {
+  const result = cruiseFixture(
+    {
+      "a.ts": 'import "@servrox/code-quality/dependency-cruiser";',
+      "package.json": JSON.stringify({
+        name: "fixture-consumer",
+        devDependencies: { "@servrox/code-quality": "0.2.0" },
+      }),
+    },
+    runtimeFactory,
+    { "node_modules/@servrox/code-quality": fileURLToPath(new URL("..", import.meta.url)) },
+    { fromParent: true, factory: true }
+  );
+  assert.equal(result.status, 1, result.output);
+  assert.match(result.output, /no-runtime-to-quality-tooling/u);
+});
+
+void test("runtime factory permits ordinary imports when baseDir differs from cwd", () => {
+  const result = cruiseFixture(
+    {
+      "a.ts": 'import "./b.ts";',
+      "b.ts": 'import "node:path"; export const value = 1;',
+    },
+    runtimeFactory,
+    {},
+    { fromParent: true, factory: true }
+  );
+  assert.equal(result.status, 0, result.output);
+});
+
+void test("runtime preset accepts absolute scan roots and retains the tooling boundary", () => {
+  const allowed = cruiseFixture(
+    {
+      "a.ts": 'import "./b.ts";',
+      "b.ts": 'import "node:path"; export const value = 1;',
+    },
+    runtimePreset,
+    {},
+    { absoluteRoots: true }
+  );
+  assert.equal(allowed.status, 0, allowed.output);
+
+  const forbidden = cruiseFixture(
+    {
+      "a.ts": 'import "@servrox/code-quality/dependency-cruiser";',
+      "package.json": JSON.stringify({
+        name: "fixture-consumer",
+        devDependencies: { "@servrox/code-quality": "0.2.0" },
+      }),
+    },
+    runtimePreset,
+    { "node_modules/@servrox/code-quality": fileURLToPath(new URL("..", import.meta.url)) },
+    { absoluteRoots: true }
+  );
+  assert.equal(forbidden.status, 1, forbidden.output);
+  assert.match(forbidden.output, /no-runtime-to-quality-tooling/u);
 });
