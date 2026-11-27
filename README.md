@@ -112,7 +112,7 @@ These limits are policy choices. Each project must still review cohesion and int
 
 `normalizeLint` validates Oxlint JSON; `normalizeKnip` validates Knip 6 JSON. `createBaseline` groups findings by file, rule and normalized message. `findRegressions` compares the current values with committed allowances.
 
-Knip member identities retain their namespace, for example `First["Unused"]`; an allowance for one enum or namespace cannot cover a same-named member in another. Unqualified export/type identities remain unchanged.
+Knip member and catalog identities retain their declared owner, for example `First["Unused"]`; an allowance for one enum, namespace or catalog cannot cover a same-named member in another. Export/type identities use the declaration's name: their reported namespace is a consumer-local import alias, so changing that alias does not change the budget.
 
 - New groups or occurrences fail.
 - Increased numeric metrics fail even when the diagnostic count stays constant.

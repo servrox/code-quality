@@ -18,9 +18,14 @@ const knipEntrySchema = z.object({
   namespace: z.string().min(1).optional(),
 });
 
-/** @param {z.infer<typeof knipEntrySchema>} entry - Knip symbol and its optional namespace. */
-const knipSymbolName = (entry) =>
-  entry.namespace === undefined ? entry.name : `${entry.namespace}[${JSON.stringify(entry.name)}]`;
+// Export namespaces are consumer-local aliases; member/catalog namespaces are declared owners.
+const knipExportRules = new Set(["exports", "types", "nsExports", "nsTypes"]);
+
+/** @param {z.infer<typeof knipEntrySchema>} entry - Knip symbol and its optional namespace. @param {string} rule - Reported issue category. */
+const knipSymbolName = (entry, rule) =>
+  entry.namespace === undefined || knipExportRules.has(rule)
+    ? entry.name
+    : `${entry.namespace}[${JSON.stringify(entry.name)}]`;
 
 const knipReportSchema = z.object({
   issues: z.array(
@@ -98,7 +103,7 @@ export const normalizeKnip = (input) => {
         findings.push({
           file,
           rule: `knip/${rule}`,
-          message: knipSymbolName(entry),
+          message: knipSymbolName(entry, rule),
           value: 1,
         });
       }

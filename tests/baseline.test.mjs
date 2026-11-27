@@ -141,3 +141,17 @@ void test("Knip members cannot borrow another namespace's allowance", () => {
   assert.equal(before[0]?.message, 'First["Unused"]');
   assert.equal(after[0]?.message, 'Second["Unused"]');
 });
+
+void test("Knip import aliases do not change exported symbol identities", () => {
+  for (const rule of ["exports", "types", "nsExports", "nsTypes"]) {
+    const before = normalizeKnip({
+      issues: [{ file: "src/values.ts", [rule]: [{ namespace: "Before", name: "unused" }] }],
+    });
+    const after = normalizeKnip({
+      issues: [{ file: "src/values.ts", [rule]: [{ namespace: "After", name: "unused" }] }],
+    });
+
+    assert.equal(findRegressions(after, createBaseline(before)).length, 0, rule);
+    assert.equal(after[0]?.message, "unused", rule);
+  }
+});
