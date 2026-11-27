@@ -28,10 +28,13 @@ export const runTool = (root, tool, config, files) => {
     args.push("--config", config);
   }
 
+  // Keep leading `!` filenames literal for Oxfmt's glob parser.
+  const operands = files.map((file) => `./${file}`);
+
   // Transport argv over stdin to preserve one warning budget without OS argument limits.
   const result = spawnSync(process.execPath, [toolProcess], {
     cwd: root,
-    input: JSON.stringify({ args: [...args, "--", ...files], entry: toolEntry(tool) }),
+    input: JSON.stringify({ args: [...args, "--", ...operands], entry: toolEntry(tool) }),
     stdio: ["pipe", "inherit", "inherit"],
   });
 

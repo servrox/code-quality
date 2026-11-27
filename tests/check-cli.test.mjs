@@ -31,6 +31,34 @@ void test("both checks report configured violations without changing files or th
   }
 });
 
+for (const flag of ["--assume-unchanged", "--skip-worktree"]) {
+  void test(`staged checks reject ${flag} paths without changing the index`, (context) => {
+    const { git, root, run, write } = createCheckFixture(context, cli);
+    const file = "staged candidate.js";
+    write(file, "debugger;\n");
+    git("add", file);
+    git("update-index", flag, file);
+    const source = "export const answer = 'ready'\n";
+    write(file, source);
+    write("other.js", source);
+    git("add", "other.js");
+    const index = readFileSync(path.join(root, ".git", "index"));
+
+    const result = run(["--scope", "staged", "--check", "both", "--", file]);
+
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /Cannot verify staged content/u);
+    assert.ok(result.output.includes(file), result.output);
+    assert.doesNotMatch(result.output, /selected files/u);
+    assert.equal(git("show", `:${file}`), "debugger;\n");
+    assert.equal(readFileSync(path.join(root, file), "utf-8"), source);
+
+    const unflagged = run(["--scope", "staged", "--check", "both", "--", "other.js"]);
+    assert.equal(unflagged.status, 0, unflagged.output);
+    assert.deepEqual(readFileSync(path.join(root, ".git", "index")), index);
+  });
+}
+
 void test("lint checks the script content of Vue, Svelte and Astro files", (context) => {
   const { run, write } = createCheckFixture(context, cli);
   const files = {

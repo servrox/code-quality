@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -124,6 +132,31 @@ await test("skips deleted descendants when a tracked directory becomes a file", 
     "source",
   ]);
 });
+
+await test(
+  "skips tracked descendants behind symlink directories, including loops",
+  { skip: process.platform === "win32" },
+  (context) => {
+    const { git, root, write } = fixture(context);
+    mkdirSync(path.join(root, "source"));
+    mkdirSync(path.join(root, "target"));
+    write("source/candidate.js", "const original = 1;\n");
+    write("target/candidate.js", "debugger;\n");
+    git("add", "source");
+    git("commit", "-qm", "tracked source directory");
+    rmSync(path.join(root, "source"), { recursive: true });
+
+    for (const target of ["target", "source"]) {
+      symlinkSync(target, path.join(root, "source"));
+
+      assert.deepEqual(
+        regularFiles(root, selectFiles({ pathspecs: ["source"], root, scope: "all" })),
+        []
+      );
+      rmSync(path.join(root, "source"));
+    }
+  }
+);
 
 await test(
   "preserves trailing whitespace in the repository root",

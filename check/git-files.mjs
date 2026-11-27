@@ -46,8 +46,9 @@ const baseCommit = (root, base) => {
   return revision === "" ? undefined : revision;
 };
 
-// Disable index stat-cache writes; --exit-code still compares file contents when
-// cached stats differ, so touching an unchanged file does not select it.
+// Numstat compares contents even with external diff drivers disabled, avoiding
+// stat-only changes without refreshing the index. Renames stay disabled so each
+// NUL-delimited record contains two counts followed by one literal path.
 /** @param {string} root @param {string[]} args @param {string[]} pathspecs @param {boolean} [includeDeleted] */
 const changed = (root, args, pathspecs, includeDeleted = false) =>
   pathsFrom(
@@ -58,7 +59,9 @@ const changed = (root, args, pathspecs, includeDeleted = false) =>
         "diff.autoRefreshIndex=false",
         "diff",
         "--no-renames",
-        "--name-only",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--numstat",
         "--exit-code",
         ...(includeDeleted ? [] : ["--diff-filter=ACMTU"]),
         "-z",
@@ -68,10 +71,26 @@ const changed = (root, args, pathspecs, includeDeleted = false) =>
       ],
       [0, 1]
     )
-  );
+  ).map((record) => record.split("\t").slice(2).join("\t"));
 
 /** @param {string} root @param {string[]} staged @param {string[]} pathspecs */
 const requireIndexContent = (root, staged, pathspecs) => {
+  const hidden = new Set(
+    pathsFrom(git(root, ["ls-files", "-v", "-z", "--", ...pathspecs]))
+      .filter((entry) => /^[a-zS] /u.test(entry))
+      .map((entry) => entry.slice(2))
+  );
+
+  const flagged = staged.filter((file) => hidden.has(file));
+
+  if (flagged.length > 0) {
+    const files = flagged.map((file) => JSON.stringify(file)).join(", ");
+
+    throw new Error(
+      `Cannot verify staged content for paths marked assume-unchanged or skip-worktree: ${files}. Clear these index flags before checking staged content.`
+    );
+  }
+
   const unstaged = new Set(changed(root, [], pathspecs, true));
 
   const mismatches = staged.filter((file) => unstaged.has(file));
@@ -125,19 +144,20 @@ export const regularFiles = (root, files) => {
   return [...new Set(files)]
     .filter((file) => {
       const candidate = path.resolve(root, file);
+      let directory = canonicalRoot;
 
-      try {
-        return (
-          lstatSync(candidate, { throwIfNoEntry: false })?.isFile() === true &&
-          realpathSync(candidate).startsWith(canonicalRoot + path.sep)
-        );
-      } catch (error) {
-        if (error instanceof Error && "code" in error && error.code === "ENOTDIR") {
+      for (const component of file.split("/").slice(0, -1)) {
+        directory = path.join(directory, component);
+
+        if (lstatSync(directory, { throwIfNoEntry: false })?.isDirectory() !== true) {
           return false;
         }
-
-        throw error;
       }
+
+      return (
+        lstatSync(candidate, { throwIfNoEntry: false })?.isFile() === true &&
+        realpathSync(candidate).startsWith(canonicalRoot + path.sep)
+      );
     })
     .toSorted();
 };

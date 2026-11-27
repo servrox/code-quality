@@ -83,11 +83,13 @@ Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) f
 | Scope | Files checked |
 | --- | --- |
 | `changed` (default) | Working-tree differences from `HEAD` or an explicit `--base <ref>`, plus non-ignored untracked files. Before the first commit, the default checks all tracked and non-ignored untracked working files. An explicit base must resolve to a commit. |
-| `staged` | Files changed in the Git index. If a selected path also has unstaged changes, the command exits before checking to avoid checking different content from the one being committed. |
+| `staged` | Files changed in the Git index. If a selected path also has unstaged changes or carries an `assume-unchanged` / `skip-worktree` flag, the command exits before checking to avoid checking different content from the one being committed. Clear those index flags before checking staged content. |
 | `unstaged` | Working-tree differences from the index, plus non-ignored untracked files |
 | `all` | Tracked files and non-ignored untracked files in the working tree |
 
 Scopes select whole files and skip deleted paths, symlinks, and paths outside the checkout. Git pathspecs after `--` are relative to the Git root, including when invoked from a subdirectory. A check with no selected files succeeds without launching the tool. If a tool ignores every selected file or supports none of them, its check also succeeds without scanning other files.
+
+Git selection compares file content without external diff or `textconv` display drivers, so those drivers cannot hide changes or write textconv caches. Selected filenames are passed literally to the tools, including names beginning with `!`.
 
 ```sh
 pnpm exec code-quality-check --scope staged --check lint
