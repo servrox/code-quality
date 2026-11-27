@@ -1,13 +1,12 @@
 {
   "name": "@servrox/code-quality",
   "version": "0.1.0",
-  "private": true,
   "description": "Reusable Ultracite/Oxc presets and quality policy for servrox projects.",
   "homepage": "https://github.com/servrox/code-quality#readme",
   "bugs": {
     "url": "https://github.com/servrox/code-quality/issues"
   },
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/servrox/code-quality.git"
@@ -59,6 +58,10 @@
       "default": "./src/baseline.mjs"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "lint": "ultracite check",

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import manifest from "@servrox/code-quality/package.json" with { type: "json" };
@@ -16,6 +16,8 @@ await Promise.all(Object.keys(manifest.exports).map(async (subpath) => {
 }));
 
 const installedRoot = path.dirname(fileURLToPath(import.meta.resolve("@servrox/code-quality/package.json")));
+assert.equal(manifest.license, "Apache-2.0");
+assert.match(readFileSync(path.join(installedRoot, "LICENSE"), "utf8"), /Apache License\s+Version 2\.0/);
 for (const excluded of ["tests", "scripts", ".github", "tsconfig.json", "oxlint.config.ts"]) {
   assert.equal(existsSync(path.join(installedRoot, excluded)), false, excluded + " must not be packed");
 }

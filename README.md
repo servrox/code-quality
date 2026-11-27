@@ -1,30 +1,33 @@
 # @servrox/code-quality
 
-Shared Ultracite/Oxc policy for multiple projects.
+[![npm version](https://img.shields.io/npm/v/%40servrox%2Fcode-quality)](https://www.npmjs.com/package/@servrox/code-quality) [![Package checks](https://github.com/servrox/code-quality/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/servrox/code-quality/actions/workflows/ci.yml) [![Apache-2.0 license](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/servrox/code-quality/blob/main/LICENSE)
 
-- Reusable presets, exact tool versions and fixture tests live here.
-- Each project owns its paths, framework selection, entrypoints and migration baselines.
-- Upstream rules provide the diagnostics; no custom lint plugin or second ESLint runner.
-- Ready-to-run JavaScript and declarations; no install, prepare or build lifecycle.
+Share linting, formatting, duplication, and dependency rules across TypeScript projects. The package provides versioned Ultracite and Oxc presets tested together. Each consumer owns its framework selection, paths, and migration baselines.
 
-## Install in a project
+## Quick start
 
-Use an approved **full 40-character Git commit SHA** in place of `COMMIT_SHA`:
+Use Node.js **24.15.0 or newer**. Once `0.1.0` is available on npm, install it with the matching tools.
 
 ```sh
-pnpm add -D '@servrox/code-quality@git+https://github.com/servrox/code-quality.git#COMMIT_SHA' \
+pnpm add -D -E @servrox/code-quality@0.1.0 \
   ultracite@8.2.1 oxlint@1.93.0 oxfmt@0.78.0 oxlint-tsgolint@7.0.2007
 ```
 
-Commit the manifest and lockfile; CI installs with `pnpm install --frozen-lockfile`. The public GitHub source requires no registry or GitHub token.
+<details>
+<summary>Install from a reviewed Git commit</summary>
 
-Use a commit retained in the repository's history. For the initial linked PRs, merge the package PR with a merge commit before merging the consumer PR. If the package PR is squash-merged instead, update the consumer to the resulting main commit and regenerate its lockfile before merging it.
+Replace `COMMIT_SHA` with a full 40-character SHA retained in the public repository.
 
-Git pins select source content. pnpm additionally records archive integrity; GitHub may regenerate archive compression. An integrity failure requires a reviewed lockfile update, never disabling integrity verification.
+```sh
+pnpm add -D -E '@servrox/code-quality@git+https://github.com/servrox/code-quality.git#COMMIT_SHA' \
+  ultracite@8.2.1 oxlint@1.93.0 oxfmt@0.78.0 oxlint-tsgolint@7.0.2007
+```
 
-The package currently keeps `private: true` and `license: "UNLICENSED"`. It is not published to npm. A future approved registry release can use the same package name and imports; consumers then replace the Git specifier with an exact version. Dependencies retain their own licenses.
+Review lockfile updates if GitHub regenerates archive compression and the archive integrity changes.
 
-## Configure a project
+</details>
+
+### Configure a project
 
 `oxlint.config.ts`:
 
@@ -62,6 +65,14 @@ export default defineConfig({
 Projects keep root-only Oxlint options at their root. Environments, ignores and framework-specific paths remain explicit in each consumer. React applies only to React workspaces. Enable other framework tooling when the project adopts it.
 
 For an existing codebase, introduce additional policies separately from an already-passing core gate. The optional baseline helpers support measured adoption; this repository contains **no application baselines**.
+
+Run `pnpm exec ultracite check` from the project root. Commit the manifest and lockfile with your project configs. Use `pnpm install --frozen-lockfile` in CI.
+
+### Set up with a coding agent
+
+Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) for installation and usage instructions for your agent. Give the agent this setup prompt from your project root.
+
+> Set up `@servrox/code-quality` using the [package quick start](https://github.com/servrox/code-quality#quick-start). Inspect the existing lint and format configs, package scripts, and CI first. Use an exact public npm version, or a reviewed full Git SHA if the version is unavailable. Wire the presets into the existing config, run the project's checks, and report any existing failures before expanding the enforced rules.
 
 ## Public exports
 
@@ -144,13 +155,8 @@ Implementation files are explicit TypeScript roots; sibling declaration files ar
 
 The install smoke test clears `NODE_PATH` and checks that source tests, development scripts and repository configs are absent from the installed package. CI uses pinned actions and runs on Node 24.15.0 and Node 26.
 
-## Updates
+## Contributing and security
 
-- Change rules/tool versions in this repository through a reviewed PR.
-- Treat stricter defaults and removed exports as consumer-visible policy changes.
-- Run `pnpm verify` and inspect the packed file list.
-- Update each consumer's Git SHA and lockfile in its own PR.
-- Run that project's existing lint, compiler, quality and CI checks.
-- Review and prune migration baselines in the consumer; do not copy them here.
+See the [contribution guide](https://github.com/servrox/code-quality/blob/main/CONTRIBUTING.md) for changes and release steps, the [changelog](https://github.com/servrox/code-quality/blob/main/CHANGELOG.md) for consumer-visible changes, and the [security policy](https://github.com/servrox/code-quality/blob/main/SECURITY.md) for private reporting.
 
-No automatic registry publication or cross-project upgrades are configured.
+This project is licensed under [Apache-2.0](https://github.com/servrox/code-quality/blob/main/LICENSE).
