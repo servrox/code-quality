@@ -76,6 +76,28 @@ Use the [Agent Skills repository](https://github.com/stark-ai-de/agent-skills) f
 
 > Set up `@servrox/code-quality` using the [package quick start](https://github.com/servrox/code-quality#quick-start). Inspect the existing lint and format configs, package scripts, and CI first. Use an exact public npm version, or a reviewed full Git SHA if the version is unavailable. Wire the presets into the existing config, run the project's checks, and fix the reported findings. Get explicit maintainer approval before creating or using a baseline.
 
+## Choose which files to check
+
+`code-quality-check` runs Oxlint and Oxfmt from the Git root and never applies fixes. Both tools use the consumer's config discovery by default. With separate configs, pass `--oxlint-config <path>` and `--oxfmt-config <path>` (relative to the invoking directory).
+
+| Scope | Files checked |
+| --- | --- |
+| `changed` (default) | Working-tree differences from `HEAD` or an explicit `--base <ref>`, plus non-ignored untracked files |
+| `staged` | Files changed in the Git index. If a selected path also has unstaged changes, the command exits before checking to avoid checking different content from the one being committed. |
+| `unstaged` | Working-tree differences from the index, plus non-ignored untracked files |
+| `all` | Tracked files and non-ignored untracked files in the working tree |
+
+Scopes select whole files and skip deleted paths, symlinks, and paths outside the checkout. Git pathspecs after `--` apply to the file selection. A check with no matching files succeeds without launching the tool.
+
+```sh
+pnpm exec code-quality-check --scope staged --check lint
+pnpm exec code-quality-check --scope unstaged --check format
+pnpm exec code-quality-check --scope changed --base "$(git merge-base HEAD origin/main)" -- apps packages
+pnpm exec code-quality-check --scope all
+```
+
+Choose the base explicitly for branch or PR comparisons. Checks that need a full graph, such as dependency analysis and duplicate detection across unchanged files, have their own commands.
+
 ## Public exports
 
 | Export | Responsibility |

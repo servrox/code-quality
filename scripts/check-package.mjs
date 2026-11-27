@@ -68,6 +68,7 @@ try {
 
   run(["install", "--ignore-scripts", "--no-frozen-lockfile"], consumer);
   run(["exec", "node", "smoke.mjs"], consumer);
+  run(["exec", "code-quality-check", "--help"], consumer);
   run(["exec", "code-quality-duplicates", "report", "--", "duplicate-scan.ts"], consumer);
   run(["exec", "tsc", "--project", "tsconfig.json"], consumer);
   console.log("Packed consumer runtime and strict TypeScript checks passed.");
